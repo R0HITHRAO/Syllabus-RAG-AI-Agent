@@ -47,7 +47,7 @@ C:\projects\pro1\
     └── vector_db/                # Persistent vector database index
 ```
 
----
+----
 
 ## 🚀 Running the Web Application
 
