@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SyllabusRAG & ChatGPT AI Agent — Intelligent Study & Exam Platform</title>
+  <meta name="description" content="A ChatGPT-style autonomous AI agent and grounded syllabus tutor with zero-hallucination guardrails and verifiable textbook citations.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX for LaTeX Math Equations -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  
+  <!-- Marked for Markdown Parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="app-navbar" id="app-navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <div class="brand-icon">🤖</div>
+        <div class="brand-text">
+          <span class="brand-title">SyllabusRAG & AI Agent</span>
+          <span class="brand-subtitle">ChatGPT-Style Academic Intelligence</span>
+        </div>
+      </div>
+
+      <div class="nav-controls">
+        <!-- Dual Mode Toggle -->
+        <div class="mode-toggle-group" title="Switch between ChatGPT-Style General AI and Strict Syllabus Mode">
+          <button id="mode-agent-btn" class="mode-btn active" data-mode="agent">
+            🤖 AI Agent (ChatGPT-Style)
+          </button>
+          <button id="mode-strict-btn" class="mode-btn" data-mode="strict">
+            🎓 Strict Exam Mode
+          </button>
+        </div>
+
+        <!-- Persona Selector -->
+        <div class="persona-select-wrapper">
+          <label for="persona-select" class="visually-hidden">AI Persona</label>
+          <select id="persona-select" class="doc-select" title="Choose AI Persona">
+            <option value="general">🤖 ChatGPT All-Rounder</option>
+            <option value="professor">🎓 Academic Professor</option>
+            <option value="socratic">🧑‍🏫 Socratic Tutor</option>
+            <option value="coding_mentor">💻 Code & Algorithm Mentor</option>
+          </select>
+        </div>
+
+        <div class="status-pill" id="status-pill">
+          <span class="status-dot"></span>
+          <span id="status-text">Connecting...</span>
+        </div>
+
+        <button id="btn-load-sample" class="btn btn-secondary btn-sm" title="Preload CS301 OS Materials">
+          📥 Load Sample Syllabus
+        </button>
+
+        <button id="btn-open-settings" class="btn btn-ghost btn-sm" title="Configure API Key">
+          ⚙️ Settings
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Container -->
+  <main class="app-main" id="main-content">
+    
+    <!-- Hero Banner -->
+    <section class="hero-section" aria-label="Course Overview">
+      <div class="hero-content">
+        <h1>Autonomous AI Agent & Syllabus Intelligence</h1>
+        <p>Ask anything like ChatGPT across all domains, write code, derive mathematical proofs, or prepare for exams strictly grounded in your verified textbooks and lecture notes.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-card">
+          <span class="stat-num" id="stat-docs-count">0</span>
+          <span class="stat-desc">Course Documents</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="stat-chunks-count">0</span>
+          <span class="stat-desc">Indexed Chunks</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="tab-navigation" role="tablist" aria-label="Application Sections">
+      <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="view-tutor" id="tab-tutor-btn" data-tab="tutor">
+        <span class="tab-icon">💬</span> AI Agent Chat
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="view-quiz" id="tab-quiz-btn" data-tab="quiz">
+        <span class="tab-icon">📝</span> Exam & Quiz Arena
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="view-docs" id="tab-docs-btn" data-tab="docs">
+        <span class="tab-icon">📚</span> Document Hub
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="view-revision" id="tab-revision-btn" data-tab="revision">
+        <span class="tab-icon">⚡</span> Revision & Flashcards
+      </button>
+    </nav>
+
+    <!-- VIEW 1: AI Agent Chat -->
+    <section class="tab-view active" id="view-tutor" role="tabpanel" aria-labelledby="tab-tutor-btn">
+      <div class="tutor-container">
+        
+        <!-- Active Mode & Filter Bar -->
+        <div class="chat-toolbar-header">
+          <div class="toolbar-left">
+            <span class="active-mode-tag" id="active-mode-tag">🤖 Mode: ChatGPT AI Agent</span>
+            <span class="active-persona-tag" id="active-persona-tag">Persona: All-Rounder</span>
+          </div>
+          <div class="toolbar-right">
+            <label for="doc-filter-select" class="visually-hidden">Document Filter</label>
+            <select id="doc-filter-select" class="doc-select-compact" title="Target specific course document">
+              <option value="All Documents">📚 All Documents</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Prompt Suggestions Chips -->
+        <div class="prompt-chips-bar">
+          <span class="chips-label">Prompt Ideas:</span>
+          <button class="chip-btn" data-prompt="Explain the Translation Lookaside Buffer (TLB) and derive the Effective Memory Access Time (EMAT) formula with an example.">
+            💡 TLB & EMAT Formula
+          </button>
+          <button class="chip-btn" data-prompt="Write an efficient Python implementation of an LRU Cache with O(1) get and put operations, including Big-O complexity analysis.">
+            💻 Write LRU Cache in Python
+          </button>
+          <button class="chip-btn" data-prompt="What are the four necessary Coffman conditions for a deadlock to occur? Explain each with an example.">
+            🔒 4 Coffman Deadlock Conditions
+          </button>
+          <button class="chip-btn" data-prompt="Detail the 6-step Page Fault Handling routine in demand paging.">
+            ⚙️ 6-Step Page Fault Routine
+          </button>
+          <button class="chip-btn" data-prompt="Create a focused 3-day study schedule and strategy for an Operating Systems and Algorithms midterm exam.">
+            📅 3-Day Study Schedule
+          </button>
+        </div>
+
+        <!-- Chat Stream Box -->
+        <div class="chat-viewport" id="chat-viewport">
+          <div class="chat-message assistant-msg">
+            <div class="msg-avatar">🤖</div>
+            <div class="msg-body">
+              <div class="msg-header">
+                <strong>ChatGPT AI Agent</strong>
+                <span class="badge badge-grounded">Versatile Agent</span>
+              </div>
+              <div class="msg-text">
+                Hello! I am your **AI Agent & Intelligent Tutor**. Ask me anything—from general coding, mathematics, science, and study planning to deep conceptual derivations. When your questions match your uploaded course materials, I automatically cite the exact textbook page numbers!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-wrapper">
+          <form id="chat-form" class="chat-form">
+            <textarea 
+              id="chat-input" 
+              class="chat-textarea" 
+              placeholder="Ask anything like ChatGPT (e.g. Write LRU cache code, derive EMAT formula, explain Banker's algorithm)..." 
+              rows="1"
+              required
+            ></textarea>
+            <button type="submit" id="btn-send-chat" class="btn btn-primary btn-icon" title="Send Query">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 2: Exam & Quiz Arena -->
+    <section class="tab-view" id="view-quiz" role="tabpanel" aria-labelledby="tab-quiz-btn">
+      <div class="quiz-container">
+        
+        <!-- Quiz Generation Controls Card -->
+        <div class="panel-card quiz-generator-card">
+          <div class="panel-header">
+            <h2>📝 Dynamic Practice Exam Generator</h2>
+            <p>Generate topic-filtered assessments directly from your course materials with automatic evaluation and textbook citations.</p>
+          </div>
+          
+          <form id="quiz-config-form" class="quiz-form-grid">
+            <div class="form-group">
+              <label for="quiz-topic-input">Exam Topic / Chapter Focus</label>
+              <input type="text" id="quiz-topic-input" class="form-input" value="Virtual Memory, Paging, and Deadlocks" required>
+            </div>
+
+            <div class="form-group">
+              <label for="quiz-count-select">Questions Count</label>
+              <select id="quiz-count-select" class="form-input">
+                <option value="3">3 Questions (Quick Check)</option>
+                <option value="5" selected>5 Questions (Standard Practice)</option>
+                <option value="8">8 Questions (Comprehensive)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="quiz-diff-select">Difficulty</label>
+              <select id="quiz-diff-select" class="form-input">
+                <option value="Easy">Easy (Definitions & Concepts)</option>
+                <option value="Medium" selected>Medium (Standard Exam Level)</option>
+                <option value="Hard">Hard (Deep Problem Solving)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="quiz-type-select">Assessment Format</label>
+              <select id="quiz-type-select" class="form-input">
+                <option value="MCQ" selected>Multiple Choice (MCQ)</option>
+                <option value="DESCRIPTIVE">Descriptive / Conceptual</option>
+              </select>
+            </div>
+
+            <div class="form-group form-action">
+              <button type="submit" id="btn-generate-quiz" class="btn btn-primary btn-block">
+                🚀 Generate Exam
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Active Exam Arena Display -->
+        <div id="active-quiz-area" class="active-quiz-area" style="display: none;"></div>
+
+        <!-- Evaluation Results & Scorecard -->
+        <div id="quiz-results-area" class="quiz-results-area" style="display: none;"></div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 3: Document Hub -->
+    <section class="tab-view" id="view-docs" role="tabpanel" aria-labelledby="tab-docs-btn">
+      <div class="docs-container">
+        
+        <!-- Upload Card -->
+        <div class="panel-card upload-card">
+          <div class="panel-header">
+            <h2>📚 Course Material Ingestion Hub</h2>
+            <p>Upload multi-page academic textbooks, lecture presentations, syllabus outlines, and past exam papers.</p>
+          </div>
+
+          <div class="dropzone" id="dropzone">
+            <div class="dropzone-icon">📁</div>
+            <p class="dropzone-title">Drag and drop your course materials here</p>
+            <p class="dropzone-sub">Supports PDF, PPTX, DOCX, TXT, and Markdown files</p>
+            <label for="file-input" class="btn btn-secondary btn-sm">Browse Files</label>
+            <input type="file" id="file-input" class="visually-hidden" multiple accept=".pdf,.pptx,.docx,.txt,.md">
+          </div>
+
+          <div id="upload-progress-bar" class="upload-progress-bar" style="display: none;">
+            <div class="progress-fill" id="progress-fill"></div>
+            <span id="progress-label" class="progress-label">Processing and indexing chunks...</span>
+          </div>
+        </div>
+
+        <!-- Document List Card -->
+        <div class="panel-card doc-list-card">
+          <div class="panel-header flex-between">
+            <div>
+              <h2>📑 Ingested Course Documents</h2>
+              <p>Active course textbooks and semantic chunks ready for retrieval.</p>
+            </div>
+            <button id="btn-clear-index" class="btn btn-danger btn-sm">🗑️ Clear All Index</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="doc-table" id="doc-table">
+              <thead>
+                <tr>
+                  <th>Document Name</th>
+                  <th>Format</th>
+                  <th>Total Pages</th>
+                  <th>Semantic Chunks</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="doc-table-body">
+                <tr>
+                  <td colspan="5" class="text-center text-muted">No documents loaded yet. Upload files or load sample material.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 4: Revision & Flashcards -->
+    <section class="tab-view" id="view-revision" role="tabpanel" aria-labelledby="tab-revision-btn">
+      <div class="revision-container">
+        
+        <!-- Flashcard Studio -->
+        <div class="panel-card">
+          <div class="panel-header flex-between">
+            <div>
+              <h2>🗂️ Interactive Study Flashcards</h2>
+              <p>Active recall cards generated directly from course definitions, theorems, and formulas.</p>
+            </div>
+            <div class="flashcard-controls-inline">
+              <input type="text" id="fc-topic-input" class="form-input form-input-sm" value="Key Definitions and Formulas" placeholder="Focus Topic">
+              <button id="btn-generate-fc" class="btn btn-primary btn-sm">✨ Generate Deck</button>
+            </div>
+          </div>
+
+          <div class="flashcard-stage" id="flashcard-stage">
+            <div class="flashcard-3d-wrapper" id="flashcard-element">
+              <div class="flashcard-inner">
+                <div class="flashcard-face flashcard-front">
+                  <div class="fc-badge" id="fc-badge">Concept #1</div>
+                  <div class="fc-question" id="fc-question">Click 'Generate Deck' or load sample syllabus to begin studying flashcards!</div>
+                  <div class="fc-hint">💡 Click or tap card to reveal answer</div>
+                </div>
+                <div class="flashcard-face flashcard-back">
+                  <div class="fc-badge">Answer & Citation</div>
+                  <div class="fc-answer" id="fc-answer">Answer explanation with exact textbook citation will appear here.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flashcard-nav">
+              <button id="btn-prev-fc" class="btn btn-secondary btn-sm" disabled>⬅️ Previous</button>
+              <span id="fc-counter" class="fc-counter">Card 0 of 0</span>
+              <button id="btn-next-fc" class="btn btn-secondary btn-sm" disabled>Next ➡️</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cheat-Sheet Generator -->
+        <div class="panel-card">
+          <div class="panel-header flex-between">
+            <div>
+              <h2>📋 High-Yield Exam Cheat-Sheet</h2>
+              <p>Consolidated summary notes with LaTeX formulas and page references for quick pre-exam revision.</p>
+            </div>
+            <button id="btn-generate-cheatsheet" class="btn btn-primary btn-sm">📝 Generate Cheat-Sheet</button>
+          </div>
+
+          <div class="cheatsheet-content" id="cheatsheet-content">
+            <p class="text-muted">Click "Generate Cheat-Sheet" to compile high-yield summaries from your uploaded syllabus.</p>
+          </div>
+          
+          <div class="cheatsheet-actions" id="cheatsheet-actions" style="display: none;">
+            <button id="btn-download-cheatsheet" class="btn btn-secondary btn-sm">📥 Download Markdown Notes (.md)</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚙️ Engine & API Configuration</h3>
+        <button id="btn-close-modal" class="btn-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="modal-api-key">Google Gemini API Key</label>
+          <input type="password" id="modal-api-key" class="form-input" placeholder="AIzaSy...">
+          <small class="text-muted">Get your free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>. Offline mode also works out of the box!</small>
+        </div>
+        <div class="form-group">
+          <label for="modal-model-select">Reasoning Model</label>
+          <select id="modal-model-select" class="form-input">
+            <option value="gemini-1.5-flash" selected>gemini-1.5-flash (Fast & Accurate)</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash (Latest Speed & Reasoning)</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro (Deep Technical Complex Analysis)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-save-settings" class="btn btn-primary">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
