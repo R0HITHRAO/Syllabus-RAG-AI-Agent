@@ -1,32 +1,22 @@
-# Virtual Environment
-.venv/
-venv/
-env/
-ENV/
-
-# Python Cache & Bytecode
+# Python artifacts
 __pycache__/
-*.py[cod]
-*$py.class
 *.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-wheel-metadata/
+.eggs/
 
-# Environment & Secrets
+# Environment variables
 .env
-.env.local
+.env.*
 
-# Persistent Database & Uploaded Data
+# Data directories (runtime generated or user-uploaded)
 data/vector_db/
 data/uploaded_docs/
-data/test_vector_db/
-*.npy
-*.sqlite3
 
-# OS Specific
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# IDE & Editor files
+# IDE / Editor specific
 .vscode/
 .idea/
-*.swp
