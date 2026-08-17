@@ -2,7 +2,7 @@
 
 A full-stack, syllabus-grounded academic AI tutor and dynamic exam assessment web application built with **FastAPI**, **Vanilla Web UI (HTML5 / CSS3 / ES6 JS / KaTeX)**, **ChromaDB / Vector Search**, and **Google Gemini API**.
 
----
+----
 
 ## 🌟 Key Features
 
