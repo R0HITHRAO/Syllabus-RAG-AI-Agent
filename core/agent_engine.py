@@ -1,6 +1,8 @@
 import os
 import re
-from typing import List, Dict, Any, Optional
+import json
+import time
+from typing import List, Dict, Any, Optional, Generator
 from core.config import (
     PERSONA_PROMPTS,
     STRICT_RAG_SYSTEM_PROMPT,
@@ -12,7 +14,7 @@ from core.vector_store import AcademicVectorStore
 
 class AIAgentEngine:
     """
-    ChatGPT-Style Autonomous AI Agent with Dual-Mode Reasoning:
+    ChatGPT-Style Autonomous AI Agent with Real-Time Streaming & Hybrid Reasoning:
     1. Agent Mode (ChatGPT-style): Answers any general, coding, math, conversational, or academic query freely,
        intelligently incorporating and citing course documents when relevant.
     2. Strict Mode: Strictly constrains answers to uploaded syllabus materials.
@@ -22,7 +24,7 @@ class AIAgentEngine:
         self.vector_store = vector_store
         self.model_name = model_name
 
-    def query(
+    def query_stream(
         self,
         question: str,
         mode: str = "agent",
@@ -30,31 +32,32 @@ class AIAgentEngine:
         top_k: int = DEFAULT_TOP_K,
         filter_source: Optional[str] = None,
         chat_history: Optional[List[Dict[str, str]]] = None
-    ) -> Dict[str, Any]:
-        """Process user query through the AI Agent pipeline."""
+    ) -> Generator[str, None, None]:
+        """
+        Yields Server-Sent Events (SSE) JSON payloads for real-time word-by-word streaming.
+        Format: data: {"token": "...", "citations": [...], "done": bool}\n\n
+        """
         question = question.strip()
         if not question:
-            return {
-                "answer": "Hello! How can I assist you today? Feel free to ask me anything or chat!",
-                "citations": [],
-                "is_grounded": True,
-                "mode": mode,
-                "persona": persona
-            }
+            yield f"data: {json.dumps({'token': 'Hello! How can I assist you today? Feel free to ask me anything or chat!', 'citations': [], 'done': True})}\n\n"
+            return
 
-        # 1. Conversational & Social Chit-Chat Detection (e.g. "hey", "heyy", "how are you", "who are you")
+        # 1. Check for quick chit-chat
         chit_chat_reply = self._handle_conversational_dialogue(question, mode, persona)
         if chit_chat_reply:
-            return {
-                "answer": chit_chat_reply,
-                "citations": [],
-                "is_grounded": True,
-                "mode": mode,
-                "persona": persona
-            }
+            words = chit_chat_reply.split(" ")
+            for i, word in enumerate(words):
+                payload = {
+                    "token": word + (" " if i < len(words) - 1 else ""),
+                    "citations": [],
+                    "done": (i == len(words) - 1)
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+                time.sleep(0.015) # Smooth typewriter pacing
+            return
 
-        # 2. Search syllabus vector index
-        min_thresh = MIN_SIMILARITY_SCORE if mode == "strict" else 0.10
+        # 2. Hybrid Search in Vector Store
+        min_thresh = MIN_SIMILARITY_SCORE if mode == "strict" else 0.08
         chunks = self.vector_store.search(
             query=question,
             top_k=top_k,
@@ -80,7 +83,115 @@ class AIAgentEngine:
                         "snippet": ch["text"][:220] + "..." if len(ch["text"]) > 220 else ch["text"]
                     })
 
-        # 3. Strict Mode Check: Refuse if out of syllabus
+        # 3. Strict Mode Check
+        if mode == "strict" and not has_course_context:
+            fallback_msg = (
+                "⚠️ **Out of Syllabus Notice (Strict Exam Mode)**\n\n"
+                "The question you asked cannot be answered strictly from your currently uploaded course documents. "
+                "In **Strict Exam Mode**, answers are restricted exclusively to your verified course materials to prevent hallucinations.\n\n"
+                "💡 *Switch to **🤖 AI Agent Mode** in the top toolbar to ask any question freely like ChatGPT, or upload the missing chapter in the Document Hub.*"
+            )
+            yield f"data: {json.dumps({'token': fallback_msg, 'citations': [], 'done': True, 'is_grounded': False})}\n\n"
+            return
+
+        # 4. Assemble Context & System Prompt
+        context_str = ""
+        if has_course_context:
+            context_blocks = []
+            for ch in chunks:
+                block = f"--- [Document: {ch['source']} | Page: {ch['page']}] ---\n{ch['text']}"
+                context_blocks.append(block)
+            context_str = "\n\n".join(context_blocks)
+
+        system_prompt = STRICT_RAG_SYSTEM_PROMPT if mode == "strict" else PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS["general"])
+        api_key = self.vector_store.api_key or os.getenv("GEMINI_API_KEY", "")
+
+        # 5. Live Gemini API Streaming if Key Available
+        if api_key:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(model_name=self.model_name, system_instruction=system_prompt)
+
+                full_prompt = ""
+                if context_str:
+                    full_prompt += f"Verified Course Material Context:\n\"\"\"\n{context_str}\n\"\"\"\n\n"
+                full_prompt += f"User Question: {question}\n\nPlease provide a natural, comprehensive, well-structured answer with LaTeX ($...$) and code if applicable."
+
+                response_stream = model.generate_content(full_prompt, stream=True)
+                for chunk in response_stream:
+                    if chunk.text:
+                        yield f"data: {json.dumps({'token': chunk.text, 'citations': citations, 'done': False})}\n\n"
+
+                yield f"data: {json.dumps({'token': '', 'citations': citations, 'done': True})}\n\n"
+                return
+            except Exception as e:
+                print(f"[AgentEngine] Streaming API notice: {e}")
+
+        # 6. Built-in Offline Token Streamer
+        full_text = self._builtin_generative_reasoner(question, context_str, persona)
+        tokens = re.split(r'(\s+)', full_text)
+        for i, tok in enumerate(tokens):
+            is_last = (i == len(tokens) - 1)
+            yield f"data: {json.dumps({'token': tok, 'citations': citations, 'done': is_last})}\n\n"
+            time.sleep(0.01)
+
+    def query(
+        self,
+        question: str,
+        mode: str = "agent",
+        persona: str = "general",
+        top_k: int = DEFAULT_TOP_K,
+        filter_source: Optional[str] = None,
+        chat_history: Optional[List[Dict[str, str]]] = None
+    ) -> Dict[str, Any]:
+        """Synchronous RAG query endpoint."""
+        question = question.strip()
+        if not question:
+            return {
+                "answer": "Hello! How can I assist you today?",
+                "citations": [],
+                "is_grounded": True,
+                "mode": mode,
+                "persona": persona
+            }
+
+        chit_chat_reply = self._handle_conversational_dialogue(question, mode, persona)
+        if chit_chat_reply:
+            return {
+                "answer": chit_chat_reply,
+                "citations": [],
+                "is_grounded": True,
+                "mode": mode,
+                "persona": persona
+            }
+
+        min_thresh = MIN_SIMILARITY_SCORE if mode == "strict" else 0.08
+        chunks = self.vector_store.search(
+            query=question,
+            top_k=top_k,
+            filter_source=filter_source,
+            min_similarity=min_thresh
+        )
+
+        has_course_context = bool(chunks)
+        citations = []
+
+        if has_course_context:
+            seen_cits = set()
+            for idx, ch in enumerate(chunks, start=1):
+                cit_key = (ch["source"], ch["page"])
+                if cit_key not in seen_cits:
+                    seen_cits.add(cit_key)
+                    citations.append({
+                        "id": idx,
+                        "source": ch["source"],
+                        "page": ch["page"],
+                        "section": ch.get("section_header", "General Topic"),
+                        "similarity": round(ch.get("similarity_score", 0.0), 3),
+                        "snippet": ch["text"][:220] + "..." if len(ch["text"]) > 220 else ch["text"]
+                    })
+
         if mode == "strict" and not has_course_context:
             return {
                 "answer": (
@@ -95,18 +206,13 @@ class AIAgentEngine:
                 "persona": persona
             }
 
-        # 4. Assemble Context & System Prompt
         context_str = ""
         if has_course_context:
-            context_blocks = []
-            for ch in chunks:
-                block = f"--- [Document: {ch['source']} | Page: {ch['page']}] ---\n{ch['text']}"
-                context_blocks.append(block)
+            context_blocks = [f"--- [Document: {ch['source']} | Page: {ch['page']}] ---\n{ch['text']}" for ch in chunks]
             context_str = "\n\n".join(context_blocks)
 
         system_prompt = STRICT_RAG_SYSTEM_PROMPT if mode == "strict" else PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS["general"])
         
-        # 5. Generate Answer via LLM or Built-in Generative Reasoner
         answer_text = self._generate_response(
             question=question,
             context_str=context_str,
@@ -125,10 +231,8 @@ class AIAgentEngine:
         }
 
     def _handle_conversational_dialogue(self, text: str, mode: str, persona: str) -> Optional[str]:
-        """Handle social pleasantries, greetings, variations, and chit-chat naturally."""
         norm = re.sub(r'[^\w\s]', '', text.lower().strip())
         
-        # 1. "How are you" variations
         if re.search(r'\b(how\s+are\s+you|how\s+are\s+u|how\s+r\s+u|hows\s+it\s+going|how\s+do\s+you\s+do|how\s+are\s+you\s+doing|how\s+is\s+your\s+day)\b', norm):
             return (
                 "I'm doing great, thank you for asking! 😊\n\n"
@@ -136,7 +240,6 @@ class AIAgentEngine:
                 "How are you doing today? What's on your mind?"
             )
 
-        # 2. Greetings (covers: hey, heyy, heyyy, hi, hiii, hello, hellooo, yo, yoo, sup, suup, wassup, howdy, hola, good morning, etc.)
         if re.search(r'\b(h+e+y+|h+i+|h+e+l+o+|y+o+|s+u+p+|w+a+s+u+p+|w+h+a+t+s+u+p+|w+h+a+t+s+\s*u+p+|h+o+w+d+y+|h+o+l+a+|a+y+y+)\b', norm) or re.search(r'\bgood\s*(morning|afternoon|evening|day)\b', norm):
             docs = self.vector_store.get_all_documents()
             doc_note = f" (I also have **{len(docs)} course document(s)** indexed if you'd like to study)" if docs else ""
@@ -146,7 +249,6 @@ class AIAgentEngine:
                 "What would you like to work on or chat about?"
             )
 
-        # 3. Identity Questions ("who are you", "what is your name", "tell me about yourself")
         if re.search(r'\b(who\s+are\s+you|what\s+is\s+your\s+name|what\s+are\s+you|tell\s+me\s+about\s+yourself|introduce\s+yourself)\b', norm):
             return (
                 "I am your **Autonomous AI Agent & Study Assistant** (built with ChatGPT-style versatility).\n\n"
@@ -158,24 +260,19 @@ class AIAgentEngine:
                 "Feel free to ask me anything!"
             )
 
-        # 4. Gratitude ("thank you", "thanks", "appreciate it")
         if re.search(r'\b(thank\s*you|thanks|thx|appreciate\s+it|thank\s+you\s+so\s+much)\b', norm):
             return "You're very welcome! 😊 Always glad to help. Let me know whenever you have another question or need a hand with something!"
 
-        # 5. Jokes & Humor
         if re.search(r'\b(tell\s+me\s+a\s+joke|make\s+me\s+laugh|say\s+something\s+funny|joke)\b', norm):
             jokes = [
                 "**Why do programmers prefer dark mode?**\n*Because light attracts bugs!* 🐛😄",
-                "**There are 10 types of people in the world:**\n*Those who understand binary, and those who don't!* 😄",
-                "**Why was the JavaScript developer sad?**\n*Because they didn't know how to 'null' their feelings!* 😅"
+                "**There are 10 types of people in the world:**\n*Those who understand binary, and those who don't!* 😄"
             ]
             return f"{jokes[0]}\n\nLet me know if you want another one or want to tackle a problem!"
 
-        # 6. Casual Acknowledgments ("ok", "okay", "cool", "nice", "awesome", "great", "got it")
         if re.match(r'^(ok|okay|cool|nice|awesome|great|got\s*it|sure|yep|yeah|sounds\s*good|alright|sweet)$', norm):
             return "Awesome! 👍 What would you like to explore next? Feel free to ask a question, request code, or test your syllabus knowledge in the Exam Arena!"
 
-        # 7. Help & Capabilities
         if re.match(r'^(help|help\s+me|what\s+can\s+you\s+do|how\s+does\s+this\s+work)$', norm):
             return (
                 "Here are some great ways we can work together:\n\n"
@@ -197,18 +294,13 @@ class AIAgentEngine:
         persona: str,
         chat_history: Optional[List[Dict[str, str]]] = None
     ) -> str:
-        """Call Gemini LLM or Built-in Generative Reasoning Fallback."""
         api_key = self.vector_store.api_key or os.getenv("GEMINI_API_KEY", "")
 
         if api_key:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
-
-                model = genai.GenerativeModel(
-                    model_name=self.model_name,
-                    system_instruction=system_prompt
-                )
+                model = genai.GenerativeModel(model_name=self.model_name, system_instruction=system_prompt)
 
                 full_prompt = ""
                 if context_str:
@@ -232,13 +324,12 @@ class AIAgentEngine:
             except Exception as e:
                 print(f"[AIAgentEngine] LLM API Call: {e}")
 
-        # Built-in Generative Reasoning Engine (when offline / no API key)
         return self._builtin_generative_reasoner(question, context_str, persona)
 
     def _builtin_generative_reasoner(self, question: str, context_str: str, persona: str) -> str:
         q_lower = question.lower()
 
-        # 1. Course Context Question (Grounded in syllabus) - HIGHEST PRIORITY when context found
+        # 1. Course Context Question
         if context_str:
             lines = [line.strip() for line in context_str.split("\n") if line.strip()]
             extracted = []
@@ -253,7 +344,7 @@ class AIAgentEngine:
                 f"> *Tip: Add your Gemini API key in ⚙️ Settings for live generative reasoning & explanations.*"
             )
 
-        # 2. Explicit Coding Requests (when user explicitly asks to write code / script / implementation)
+        # 2. Explicit Coding Requests
         is_code_request = any(p in q_lower for p in ["write code", "write a python", "write javascript", "implement", "code for", "write script", "function to", "reverse linked list"])
         if is_code_request:
             if "reverse" in q_lower and "linked list" in q_lower:

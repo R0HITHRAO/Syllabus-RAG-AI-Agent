@@ -10,7 +10,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from core.config import (
@@ -30,7 +30,7 @@ from core.syllabus_analyzer import SyllabusAnalyzer
 app = FastAPI(
     title="SyllabusRAG & ChatGPT AI Agent Platform",
     description="ChatGPT-Style Autonomous AI Agent & Grounded Exam Preparation Platform",
-    version="2.0.0"
+    version="2.1.0"
 )
 
 # Enable CORS
@@ -84,6 +84,12 @@ class QuizGenerateRequest(BaseModel):
 class QuizSubmitRequest(BaseModel):
     quiz: List[Dict[str, Any]]
     user_answers: Dict[int, str]
+
+class QuizExportRequest(BaseModel):
+    quiz: List[Dict[str, Any]]
+    topic: str = "Academic Practice Exam"
+    quiz_type: str = "MCQ"
+    include_answers: bool = True
 
 class FlashcardRequest(BaseModel):
     topic: str = "Key Concepts"
@@ -199,6 +205,22 @@ async def chat_with_agent(req: ChatRequest):
     )
     return result
 
+@app.post("/api/chat/stream")
+async def chat_stream_with_agent(req: ChatRequest):
+    """Server-Sent Events (SSE) word-by-word streaming endpoint."""
+    filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+    return StreamingResponse(
+        agent_engine.query_stream(
+            question=req.query,
+            mode=req.mode,
+            persona=req.persona,
+            top_k=req.top_k,
+            filter_source=filter_val,
+            chat_history=req.chat_history
+        ),
+        media_type="text/event-stream"
+    )
+
 @app.post("/api/quiz/generate")
 async def generate_quiz(req: QuizGenerateRequest):
     filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
@@ -221,6 +243,43 @@ async def generate_quiz(req: QuizGenerateRequest):
 async def submit_quiz(req: QuizSubmitRequest):
     result = quiz_gen.grade_mcq_submission(req.quiz, req.user_answers)
     return result
+
+@app.post("/api/quiz/export")
+async def export_quiz_worksheet(req: QuizExportRequest):
+    """Generate printable markdown/plain text exam worksheet with answer key."""
+    lines = [
+        f"# 📝 Examination Worksheet: {req.topic}",
+        f"**Date**: __________________ | **Student Name**: ___________________________",
+        f"**Format**: {req.quiz_type} Assessment | **Total Questions**: {len(req.quiz)}",
+        "---",
+        ""
+    ]
+
+    for idx, q in enumerate(req.quiz, start=1):
+        lines.append(f"### Question {idx}")
+        lines.append(q.get("question", ""))
+        lines.append("")
+        if req.quiz_type == "MCQ" and "options" in q:
+            for opt_key, opt_text in sorted(q["options"].items()):
+                lines.append(f"  [ ] **({opt_key})** {opt_text}")
+        else:
+            lines.append("*Your Answer:*")
+            lines.append("\n" * 4)
+        lines.append("")
+
+    if req.include_answers:
+        lines.append("---")
+        lines.append("## 🔑 Official Answer Key & Rationales")
+        lines.append("")
+        for idx, q in enumerate(req.quiz, start=1):
+            if req.quiz_type == "MCQ":
+                lines.append(f"**Q{idx}**: **Option ({q.get('correct_option', 'A')})** — *{q.get('explanation', '')}* (Source: {q.get('source', '')}, Page {q.get('page', '')})")
+            else:
+                lines.append(f"**Q{idx} Model Answer**: {q.get('model_answer', '')}")
+                lines.append(f"*Key Concepts*: {', '.join(q.get('key_concepts', []))} (Source: {q.get('source', '')}, Page {q.get('page', '')})")
+            lines.append("")
+
+    return {"markdown": "\n".join(lines), "filename": f"{req.topic.replace(' ', '_')}_Exam_Worksheet.md"}
 
 @app.post("/api/flashcards")
 async def generate_flashcards(req: FlashcardRequest):

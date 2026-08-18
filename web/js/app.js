@@ -1,117 +1,556 @@
 /**
- * SyllabusRAG & ChatGPT AI Agent — Frontend Logic
- * Full Autonomous AI Agent, Multi-Persona, KaTeX Math & Exam Suite
+ * SyllabusAI — Frontend State, Streaming Client, Multi-Session & Theme Controller
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-  // ---------------------------------------------------------
-  // Application State
-  // ---------------------------------------------------------
-  const state = {
-    mode: 'agent', // 'agent' (ChatGPT-Style) or 'strict' (Syllabus-Only)
-    persona: 'general', // 'general', 'professor', 'socratic', 'coding_mentor'
-    documents: [],
-    totalChunks: 0,
-    activeQuiz: null,
-    chatHistory: [],
-    flashcards: [],
-    currentFlashcardIndex: 0,
-    isCardFlipped: false,
-    cheatSheetMarkdown: ''
-  };
-
-  // ---------------------------------------------------------
-  // DOM Elements
-  // ---------------------------------------------------------
-  const elements = {
-    // Mode & Persona
-    modeAgentBtn: document.getElementById('mode-agent-btn'),
-    modeStrictBtn: document.getElementById('mode-strict-btn'),
-    personaSelect: document.getElementById('persona-select'),
-    activeModeTag: document.getElementById('active-mode-tag'),
-    activePersonaTag: document.getElementById('active-persona-tag'),
-
-    // Status & Navbar
-    statusPill: document.getElementById('status-pill'),
-    statusText: document.getElementById('status-text'),
-    statDocsCount: document.getElementById('stat-docs-count'),
-    statChunksCount: document.getElementById('stat-chunks-count'),
-    docFilterSelect: document.getElementById('doc-filter-select'),
-    btnLoadSample: document.getElementById('btn-load-sample'),
-    btnOpenSettings: document.getElementById('btn-open-settings'),
+class SyllabusApp {
+  constructor() {
+    // Application State
+    this.currentMode = 'agent'; // 'agent' or 'strict'
+    this.currentPersona = 'general';
+    this.currentTheme = localStorage.getItem('syllabus_theme') || 'nebula';
+    this.sessions = this.loadSessions();
+    this.activeSessionId = this.sessions.length > 0 ? this.sessions[0].id : this.createNewSessionId();
     
-    // Tabs
-    tabBtns: document.querySelectorAll('.tab-btn'),
-    tabViews: document.querySelectorAll('.tab-view'),
+    this.isStreaming = false;
+    this.speechRecognition = null;
+    this.isRecordingVoice = false;
+    this.activeQuiz = null;
 
-    // Chat / Tutor
-    chatViewport: document.getElementById('chat-viewport'),
-    chatForm: document.getElementById('chat-form'),
-    chatInput: document.getElementById('chat-input'),
-    promptChips: document.querySelectorAll('.chip-btn'),
-
-    // Quiz
-    quizForm: document.getElementById('quiz-config-form'),
-    quizTopicInput: document.getElementById('quiz-topic-input'),
-    quizCountSelect: document.getElementById('quiz-count-select'),
-    quizDiffSelect: document.getElementById('quiz-diff-select'),
-    quizTypeSelect: document.getElementById('quiz-type-select'),
-    activeQuizArea: document.getElementById('active-quiz-area'),
-    quizResultsArea: document.getElementById('quiz-results-area'),
-
-    // Documents Hub
-    dropzone: document.getElementById('dropzone'),
-    fileInput: document.getElementById('file-input'),
-    docTableBody: document.getElementById('doc-table-body'),
-    btnClearIndex: document.getElementById('btn-clear-index'),
-    uploadProgressBar: document.getElementById('upload-progress-bar'),
-    progressFill: document.getElementById('progress-fill'),
-
-    // Flashcards & Revision
-    fcTopicInput: document.getElementById('fc-topic-input'),
-    btnGenerateFc: document.getElementById('btn-generate-fc'),
-    flashcardElement: document.getElementById('flashcard-element'),
-    fcBadge: document.getElementById('fc-badge'),
-    fcQuestion: document.getElementById('fc-question'),
-    fcAnswer: document.getElementById('fc-answer'),
-    fcCounter: document.getElementById('fc-counter'),
-    btnPrevFc: document.getElementById('btn-prev-fc'),
-    btnNextFc: document.getElementById('btn-next-fc'),
-
-    // Cheat-sheet
-    btnGenerateCheatsheet: document.getElementById('btn-generate-cheatsheet'),
-    cheatsheetContent: document.getElementById('cheatsheet-content'),
-    cheatsheetActions: document.getElementById('cheatsheet-actions'),
-    btnDownloadCheatsheet: document.getElementById('btn-download-cheatsheet'),
-
-    // Settings Modal
-    settingsModal: document.getElementById('settings-modal'),
-    btnCloseModal: document.getElementById('btn-close-modal'),
-    modalApiKey: document.getElementById('modal-api-key'),
-    modalModelSelect: document.getElementById('modal-model-select'),
-    btnSaveSettings: document.getElementById('btn-save-settings'),
-
-    // Toasts
-    toastContainer: document.getElementById('toast-container')
-  };
-
-  // ---------------------------------------------------------
-  // Helper Utilities
-  // ---------------------------------------------------------
-  function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    elements.toastContainer.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    this.initElements();
+    this.initTheme();
+    this.initEventListeners();
+    this.initVoiceInput();
+    this.renderSessionsList();
+    this.renderActiveSessionMessages();
+    this.fetchSystemStatus();
   }
 
-  function renderMath(container) {
-    if (window.renderMathInElement && container) {
-      window.renderMathInElement(container, {
+  initElements() {
+    // Theme & Navigation
+    this.themeSelect = document.getElementById('theme-select');
+    this.modeAgentBtn = document.getElementById('mode-agent-btn');
+    this.modeStrictBtn = document.getElementById('mode-strict-btn');
+    this.personaSelect = document.getElementById('persona-select');
+    this.btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+    this.sidebar = document.getElementById('chat-sidebar');
+    this.sessionsListEl = document.getElementById('sessions-list');
+    this.btnNewChat = document.getElementById('btn-new-chat');
+
+    // Tabs
+    this.tabButtons = document.querySelectorAll('.tab-btn');
+    this.tabPanes = document.querySelectorAll('.tab-pane');
+
+    // Chat
+    this.chatMessages = document.getElementById('chat-messages');
+    this.chatInput = document.getElementById('chat-input');
+    this.btnSendChat = document.getElementById('btn-send-chat');
+    this.btnClearChat = document.getElementById('btn-clear-chat');
+    this.chatDocFilter = document.getElementById('chat-doc-filter');
+    this.btnVoiceInput = document.getElementById('btn-voice-input');
+
+    // Exam Arena
+    this.btnGenerateQuiz = document.getElementById('btn-generate-quiz');
+    this.quizContainer = document.getElementById('quiz-container');
+    this.quizFooter = document.getElementById('quiz-footer');
+    this.btnSubmitQuiz = document.getElementById('btn-submit-quiz');
+    this.quizResults = document.getElementById('quiz-results');
+    this.btnExportWorksheet = document.getElementById('btn-export-worksheet');
+
+    // Document Hub
+    this.dropZone = document.getElementById('drop-zone');
+    this.fileInput = document.getElementById('file-input');
+    this.btnLoadSample = document.getElementById('btn-load-sample');
+    this.btnClearDocs = document.getElementById('btn-clear-docs');
+    this.docsTableContainer = document.getElementById('documents-table-container');
+    this.docCountBadge = document.getElementById('doc-count-badge');
+
+    // Flashcards & Cheatsheet
+    this.btnGenerateCards = document.getElementById('btn-generate-cards');
+    this.flashcardsContainer = document.getElementById('flashcards-container');
+    this.btnGenerateCheatsheet = document.getElementById('btn-generate-cheatsheet');
+    this.cheatsheetOutput = document.getElementById('cheatsheet-output');
+    this.cheatsheetContent = document.getElementById('cheatsheet-content');
+    this.btnDownloadCheatsheet = document.getElementById('btn-download-cheatsheet');
+
+    // Settings Modal
+    this.btnOpenSettings = document.getElementById('btn-open-settings');
+    this.settingsModal = document.getElementById('settings-modal');
+    this.btnCloseSettings = document.getElementById('btn-close-settings');
+    this.btnSaveSettings = document.getElementById('btn-save-settings');
+    this.geminiKeyInput = document.getElementById('gemini-key-input');
+    this.modelSelect = document.getElementById('model-select');
+    this.statusDot = document.getElementById('status-dot');
+    this.statusText = document.getElementById('status-text');
+  }
+
+  /* --- THEME SYSTEM --- */
+  initTheme() {
+    document.documentElement.setAttribute('data-theme', this.currentTheme);
+    if (this.themeSelect) {
+      this.themeSelect.value = this.currentTheme;
+    }
+  }
+
+  setTheme(themeName) {
+    this.currentTheme = themeName;
+    document.documentElement.setAttribute('data-theme', themeName);
+    localStorage.setItem('syllabus_theme', themeName);
+  }
+
+  /* --- SESSIONS & MULTI-CHAT MANAGER --- */
+  createNewSessionId() {
+    return 'session_' + Date.now();
+  }
+
+  loadSessions() {
+    try {
+      const stored = localStorage.getItem('syllabus_sessions');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveSessions() {
+    localStorage.setItem('syllabus_sessions', JSON.stringify(this.sessions));
+  }
+
+  getActiveSession() {
+    return this.sessions.find(s => s.id === this.activeSessionId);
+  }
+
+  createNewChat() {
+    const newSession = {
+      id: this.createNewSessionId(),
+      title: 'New Conversation',
+      messages: [],
+      timestamp: Date.now()
+    };
+    this.sessions.unshift(newSession);
+    this.activeSessionId = newSession.id;
+    this.saveSessions();
+    this.renderSessionsList();
+    this.renderActiveSessionMessages();
+    this.chatInput.focus();
+  }
+
+  switchSession(sessionId) {
+    this.activeSessionId = sessionId;
+    this.renderSessionsList();
+    this.renderActiveSessionMessages();
+  }
+
+  deleteSession(sessionId, event) {
+    if (event) event.stopPropagation();
+    this.sessions = this.sessions.filter(s => s.id !== sessionId);
+    if (this.activeSessionId === sessionId) {
+      this.activeSessionId = this.sessions.length > 0 ? this.sessions[0].id : this.createNewSessionId();
+      if (this.sessions.length === 0) {
+        this.createNewChat();
+        return;
+      }
+    }
+    this.saveSessions();
+    this.renderSessionsList();
+    this.renderActiveSessionMessages();
+  }
+
+  renderSessionsList() {
+    if (!this.sessionsListEl) return;
+    this.sessionsListEl.innerHTML = '';
+    
+    if (this.sessions.length === 0) {
+      this.createNewChat();
+      return;
+    }
+
+    this.sessions.forEach(sess => {
+      const item = document.createElement('div');
+      item.className = `session-item ${sess.id === this.activeSessionId ? 'active' : ''}`;
+      item.innerHTML = `
+        <span class="session-title">${this.escapeHtml(sess.title)}</span>
+        <button class="session-delete-btn" title="Delete conversation">&times;</button>
+      `;
+      item.addEventListener('click', () => this.switchSession(sess.id));
+      const delBtn = item.querySelector('.session-delete-btn');
+      delBtn.addEventListener('click', (e) => this.deleteSession(sess.id, e));
+      this.sessionsListEl.appendChild(item);
+    });
+  }
+
+  /* --- EVENT LISTENERS --- */
+  initEventListeners() {
+    // Theme Selector Change
+    this.themeSelect?.addEventListener('change', (e) => this.setTheme(e.target.value));
+
+    // Mode Toggle
+    this.modeAgentBtn?.addEventListener('click', () => this.setMode('agent'));
+    this.modeStrictBtn?.addEventListener('click', () => this.setMode('strict'));
+
+    // Persona Selector
+    this.personaSelect?.addEventListener('change', (e) => {
+      this.currentPersona = e.target.value;
+    });
+
+    // Sidebar Toggle
+    this.btnToggleSidebar?.addEventListener('click', () => {
+      this.sidebar.classList.toggle('collapsed');
+    });
+
+    // New Chat Button
+    this.btnNewChat?.addEventListener('click', () => this.createNewChat());
+
+    // Navigation Tabs
+    this.tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+    });
+
+    // Chat Send & Enter Key
+    this.btnSendChat?.addEventListener('click', () => this.handleSendMessage());
+    this.chatInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.handleSendMessage();
+      }
+    });
+
+    // Autosize Chat Input Textarea
+    this.chatInput?.addEventListener('input', () => {
+      this.chatInput.style.height = 'auto';
+      this.chatInput.style.height = Math.min(this.chatInput.scrollHeight, 140) + 'px';
+    });
+
+    // Clear Chat
+    this.btnClearChat?.addEventListener('click', () => {
+      const activeSess = this.getActiveSession();
+      if (activeSess) {
+        activeSess.messages = [];
+        this.saveSessions();
+        this.renderActiveSessionMessages();
+      }
+    });
+
+    // Prompt Chips in Welcome Hero
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('prompt-chip')) {
+        const query = e.target.dataset.query;
+        if (query && this.chatInput) {
+          this.chatInput.value = query;
+          this.handleSendMessage();
+        }
+      }
+    });
+
+    // Exam Arena
+    this.btnGenerateQuiz?.addEventListener('click', () => this.generateQuiz());
+    this.btnSubmitQuiz?.addEventListener('click', () => this.submitQuiz());
+    this.btnExportWorksheet?.addEventListener('click', () => this.exportWorksheet());
+
+    // Document Hub
+    this.dropZone?.addEventListener('click', () => this.fileInput?.click());
+    this.fileInput?.addEventListener('change', (e) => this.uploadFiles(e.target.files));
+    this.btnLoadSample?.addEventListener('click', () => this.loadSampleMaterial());
+    this.btnClearDocs?.addEventListener('click', () => this.clearAllDocs());
+
+    // Drag & Drop
+    ['dragenter', 'dragover'].forEach(name => {
+      this.dropZone?.addEventListener(name, (e) => {
+        e.preventDefault();
+        this.dropZone.classList.add('drag-over');
+      });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      this.dropZone?.addEventListener(name, (e) => {
+        e.preventDefault();
+        this.dropZone.classList.remove('drag-over');
+      });
+    });
+    this.dropZone?.addEventListener('drop', (e) => {
+      if (e.dataTransfer?.files?.length) {
+        this.uploadFiles(e.dataTransfer.files);
+      }
+    });
+
+    // Flashcards
+    this.btnGenerateCards?.addEventListener('click', () => this.generateFlashcards());
+    this.btnGenerateCheatsheet?.addEventListener('click', () => this.generateCheatsheet());
+    this.btnDownloadCheatsheet?.addEventListener('click', () => this.downloadCheatsheet());
+
+    // Settings Modal
+    this.btnOpenSettings?.addEventListener('click', () => this.settingsModal.style.display = 'flex');
+    this.btnCloseSettings?.addEventListener('click', () => this.settingsModal.style.display = 'none');
+    this.settingsModal?.addEventListener('click', (e) => {
+      if (e.target === this.settingsModal) this.settingsModal.style.display = 'none';
+    });
+    this.btnSaveSettings?.addEventListener('click', () => this.saveSettings());
+  }
+
+  setMode(mode) {
+    this.currentMode = mode;
+    if (mode === 'agent') {
+      this.modeAgentBtn.classList.add('active');
+      this.modeStrictBtn.classList.remove('active');
+    } else {
+      this.modeStrictBtn.classList.add('active');
+      this.modeAgentBtn.classList.remove('active');
+    }
+  }
+
+  switchTab(tabId) {
+    this.tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+    this.tabPanes.forEach(p => p.classList.toggle('active', p.id === tabId));
+  }
+
+  /* --- VOICE INPUT (SPEECH TO TEXT) --- */
+  initVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      if (this.btnVoiceInput) this.btnVoiceInput.style.display = 'none';
+      return;
+    }
+
+    this.speechRecognition = new SpeechRecognition();
+    this.speechRecognition.continuous = false;
+    this.speechRecognition.interimResults = false;
+    this.speechRecognition.lang = 'en-US';
+
+    this.speechRecognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript && this.chatInput) {
+        this.chatInput.value += (this.chatInput.value ? ' ' : '') + transcript;
+        this.chatInput.focus();
+      }
+    };
+
+    this.speechRecognition.onend = () => {
+      this.isRecordingVoice = false;
+      this.btnVoiceInput?.classList.remove('recording');
+    };
+
+    this.btnVoiceInput?.addEventListener('click', () => {
+      if (!this.speechRecognition) return;
+      if (!this.isRecordingVoice) {
+        try {
+          this.speechRecognition.start();
+          this.isRecordingVoice = true;
+          this.btnVoiceInput.classList.add('recording');
+        } catch {}
+      } else {
+        this.speechRecognition.stop();
+        this.isRecordingVoice = false;
+        this.btnVoiceInput.classList.remove('recording');
+      }
+    });
+  }
+
+  /* --- CHAT STREAMING & MESSAGES --- */
+  renderActiveSessionMessages() {
+    const activeSess = this.getActiveSession();
+    if (!activeSess || activeSess.messages.length === 0) {
+      this.chatMessages.innerHTML = `
+        <div class="welcome-hero-card">
+          <div class="hero-sparkle-badge">🤖 ChatGPT-Style Intelligence + Syllabus Grounding</div>
+          <h2 class="hero-title">Welcome to <span class="gradient-text">SyllabusAI</span></h2>
+          <p class="hero-subtitle">
+            Ask general questions freely, write code, derive mathematical formulas, or explore your uploaded course materials with exact textbook citations.
+          </p>
+          <div class="hero-prompts">
+            <button class="prompt-chip" data-query="How are you doing today?">👋 Say Hello</button>
+            <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its complexity.">💻 Linked List in Python</button>
+            <button class="prompt-chip" data-query="What is the Effective Memory Access Time (EMAT) formula from my notes?">📚 EMAT Formula</button>
+            <button class="prompt-chip" data-query="What are the 4 Coffman conditions for deadlocks?">🔒 Deadlock Conditions</button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    this.chatMessages.innerHTML = '';
+    activeSess.messages.forEach(msg => {
+      this.appendMessageElement(msg.role, msg.content, msg.citations, false);
+    });
+    this.scrollToBottom();
+    this.renderMath();
+  }
+
+  async handleSendMessage() {
+    const text = this.chatInput.value.trim();
+    if (!text || this.isStreaming) return;
+
+    this.chatInput.value = '';
+    this.chatInput.style.height = 'auto';
+
+    const activeSess = this.getActiveSession();
+    if (!activeSess) return;
+
+    // Update Session Title if first message
+    if (activeSess.messages.length === 0) {
+      activeSess.title = text.length > 28 ? text.substring(0, 28) + '...' : text;
+      this.saveSessions();
+      this.renderSessionsList();
+    }
+
+    // Add User Message
+    activeSess.messages.push({ role: 'user', content: text, citations: [] });
+    this.saveSessions();
+    this.appendMessageElement('user', text, [], false);
+    this.scrollToBottom();
+
+    // Prepare Agent Placeholder Message
+    const agentMsgEl = this.appendMessageElement('agent', '', [], true);
+    const contentEl = agentMsgEl.querySelector('.message-body');
+    const citationsContainer = agentMsgEl.querySelector('.citations-box');
+    this.isStreaming = true;
+
+    try {
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: text,
+          mode: this.currentMode,
+          persona: this.currentPersona,
+          filter_source: this.chatDocFilter?.value || 'All Documents',
+          chat_history: activeSess.messages.map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullAgentText = '';
+      let collectedCitations = [];
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunkStr = decoder.decode(value, { stream: true });
+        const lines = chunkStr.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.substring(6));
+              if (data.token) {
+                fullAgentText += data.token;
+                contentEl.innerHTML = this.renderMarkdown(fullAgentText) + '<span class="typing-cursor"></span>';
+                this.scrollToBottom();
+              }
+              if (data.citations && data.citations.length > 0) {
+                collectedCitations = data.citations;
+              }
+            } catch {}
+          }
+        }
+      }
+
+      // Complete Streaming
+      contentEl.innerHTML = this.renderMarkdown(fullAgentText);
+      if (collectedCitations.length > 0) {
+        citationsContainer.style.display = 'block';
+        citationsContainer.innerHTML = `
+          <div class="citations-title">📌 Verified Syllabus Citations:</div>
+          ${collectedCitations.map(c => `
+            <span class="citation-badge" title="${this.escapeHtml(c.snippet)}">
+              📄 ${this.escapeHtml(c.source)} (Page ${c.page})
+            </span>
+          `).join('')}
+        `;
+      }
+
+      activeSess.messages.push({
+        role: 'agent',
+        content: fullAgentText,
+        citations: collectedCitations
+      });
+      this.saveSessions();
+      this.renderMath();
+
+    } catch (err) {
+      console.error(err);
+      contentEl.innerHTML = '<span style="color:#ef4444;">⚠️ Network error communicating with agent.</span>';
+    } finally {
+      this.isStreaming = false;
+      this.scrollToBottom();
+    }
+  }
+
+  appendMessageElement(role, content, citations = [], isStreaming = false) {
+    // Remove welcome card if present
+    const welcomeCard = this.chatMessages.querySelector('.welcome-hero-card');
+    if (welcomeCard) welcomeCard.remove();
+
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble ${role}-message`;
+    const avatar = role === 'user' ? '👤' : (this.currentMode === 'agent' ? '🤖' : '🎓');
+    const headerTitle = role === 'user' ? 'You' : `SyllabusAI (${this.getPersonaName()})`;
+
+    bubble.innerHTML = `
+      <div class="message-avatar">${avatar}</div>
+      <div class="message-content">
+        <div class="message-header">${headerTitle}</div>
+        <div class="message-body">${this.renderMarkdown(content)}${isStreaming ? '<span class="typing-cursor"></span>' : ''}</div>
+        <div class="citations-box" style="${citations.length > 0 ? 'display:block;' : 'display:none;'}">
+          ${citations.length > 0 ? `
+            <div class="citations-title">📌 Verified Syllabus Citations:</div>
+            ${citations.map(c => `
+              <span class="citation-badge" title="${this.escapeHtml(c.snippet)}">
+                📄 ${this.escapeHtml(c.source)} (Page ${c.page})
+              </span>
+            `).join('')}
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    this.chatMessages.appendChild(bubble);
+    return bubble;
+  }
+
+  getPersonaName() {
+    const names = {
+      general: 'ChatGPT All-Rounder',
+      professor: 'Academic Professor',
+      socratic: 'Socratic Tutor',
+      coding_mentor: 'Code Mentor'
+    };
+    return names[this.currentPersona] || 'AI Agent';
+  }
+
+  renderMarkdown(text) {
+    if (!text) return '';
+    let parsed = this.escapeHtml(text);
+
+    // Code blocks with syntax badge
+    parsed = parsed.replace(/```([a-zA-Z]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+      return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+    });
+
+    // Inline code
+    parsed = parsed.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Headers
+    parsed = parsed.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+    parsed = parsed.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+    parsed = parsed.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+    
+    // Bold & Italics
+    parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    parsed = parsed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+    // Bullet points
+    parsed = parsed.replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>');
+    parsed = parsed.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+    // Line breaks
+    parsed = parsed.replace(/\n\n/g, '<br><br>');
+
+    return parsed;
+  }
+
+  renderMath() {
+    if (window.renderMathInElement) {
+      window.renderMathInElement(this.chatMessages, {
         delimiters: [
           { left: '$$', right: '$$', display: true },
           { left: '$', right: '$', display: false },
@@ -123,714 +562,327 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ---------------------------------------------------------
-  // API Calls & Data Sync
-  // ---------------------------------------------------------
-  async function fetchStatus() {
-    try {
-      const res = await fetch('/api/status');
-      if (!res.ok) throw new Error('Status fetch failed');
-      const data = await res.json();
-
-      state.documents = data.documents || [];
-      state.totalChunks = data.total_chunks || 0;
-
-      elements.statDocsCount.textContent = state.documents.length;
-      elements.statChunksCount.textContent = state.totalChunks;
-      elements.statusText.textContent = `${state.documents.length} Docs (${state.totalChunks} Chunks)`;
-
-      updateFilterDropdown();
-      renderDocumentTable();
-
-    } catch (err) {
-      elements.statusText.textContent = 'Server Offline';
-      console.error(err);
-    }
+  scrollToBottom() {
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
   }
 
-  function updateFilterDropdown() {
-    const currentVal = elements.docFilterSelect.value;
-    elements.docFilterSelect.innerHTML = '<option value="All Documents">📚 All Documents</option>';
-    
-    state.documents.forEach(doc => {
-      const opt = document.createElement('option');
-      opt.value = doc.source;
-      opt.textContent = `📄 ${doc.source}`;
-      elements.docFilterSelect.appendChild(opt);
-    });
+  /* --- EXAM ARENA & WORKSHEET EXPORTER --- */
+  async generateQuiz() {
+    const topic = document.getElementById('quiz-topic')?.value || 'General Operating Systems';
+    const num = parseInt(document.getElementById('quiz-count')?.value || '5');
+    const diff = document.getElementById('quiz-difficulty')?.value || 'Medium';
+    const qType = document.getElementById('quiz-type')?.value || 'MCQ';
 
-    if (state.documents.some(d => d.source === currentVal)) {
-      elements.docFilterSelect.value = currentVal;
-    }
-  }
-
-  function renderDocumentTable() {
-    if (state.documents.length === 0) {
-      elements.docTableBody.innerHTML = `
-        <tr>
-          <td colspan="5" class="text-center text-muted" style="padding: 2rem;">
-            No documents loaded yet. Drag and drop files above or click 'Load Sample Syllabus'.
-          </td>
-        </tr>`;
-      return;
-    }
-
-    elements.docTableBody.innerHTML = state.documents.map(doc => `
-      <tr>
-        <td><strong>📄 ${doc.source}</strong></td>
-        <td><span class="badge badge-grounded">${doc.doc_type}</span></td>
-        <td>${doc.total_pages} Pages</td>
-        <td>${doc.chunk_count} Chunks</td>
-        <td>
-          <button class="btn btn-danger btn-sm btn-delete-doc" data-doc="${doc.source}">
-            🗑️ Delete
-          </button>
-        </td>
-      </tr>
-    `).join('');
-
-    document.querySelectorAll('.btn-delete-doc').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const docName = e.currentTarget.getAttribute('data-doc');
-        if (confirm(`Remove '${docName}' from the syllabus index?`)) {
-          await deleteDocument(docName);
-        }
-      });
-    });
-  }
-
-  async function deleteDocument(docName) {
-    try {
-      const res = await fetch(`/api/documents/${encodeURIComponent(docName)}`, { method: 'DELETE' });
-      if (res.ok) {
-        showToast(`Deleted ${docName}`);
-        await fetchStatus();
-      }
-    } catch (err) {
-      showToast('Error deleting document');
-    }
-  }
-
-  async function loadSampleMaterial() {
-    elements.btnLoadSample.disabled = true;
-    elements.btnLoadSample.textContent = 'Loading...';
-    try {
-      const res = await fetch('/api/sample/load', { method: 'POST' });
-      const data = await res.json();
-      showToast(data.message || 'Sample Syllabus Loaded!');
-      await fetchStatus();
-    } catch (err) {
-      showToast('Failed to load sample data');
-    } finally {
-      elements.btnLoadSample.disabled = false;
-      elements.btnLoadSample.textContent = '📥 Load Sample Syllabus';
-    }
-  }
-
-  async function clearAllData() {
-    if (!confirm('Are you sure you want to clear all documents and indices?')) return;
-    try {
-      await fetch('/api/clear', { method: 'POST' });
-      showToast('Vector store and history cleared');
-      await fetchStatus();
-    } catch (err) {
-      showToast('Error clearing data');
-    }
-  }
-
-  // ---------------------------------------------------------
-  // File Upload Handler
-  // ---------------------------------------------------------
-  async function handleFileUpload(files) {
-    if (!files || files.length === 0) return;
-
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      formData.append('files', files[i]);
-    }
-
-    elements.uploadProgressBar.style.display = 'block';
-    elements.progressFill.style.width = '60%';
-
-    try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      elements.progressFill.style.width = '100%';
-      const data = await res.json();
-      showToast(data.message || 'Files uploaded and indexed!');
-      await fetchStatus();
-    } catch (err) {
-      showToast('File upload failed');
-    } finally {
-      setTimeout(() => {
-        elements.uploadProgressBar.style.display = 'none';
-        elements.progressFill.style.width = '0%';
-      }, 1000);
-    }
-  }
-
-  // ---------------------------------------------------------
-  // TAB 1: ChatGPT AI Agent Chat
-  // ---------------------------------------------------------
-  async function submitChatMessage(query) {
-    if (!query || !query.trim()) return;
-    const cleanQuery = query.trim();
-
-    // 1. Append User Message
-    appendMessage('user', cleanQuery);
-    state.chatHistory.push({ role: 'user', content: cleanQuery });
-    elements.chatInput.value = '';
-
-    // 2. Append Assistant Loading Bubble
-    const assistantBubble = appendLoadingMessage();
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: cleanQuery,
-          mode: state.mode,
-          persona: state.persona,
-          filter_source: elements.docFilterSelect.value,
-          chat_history: state.chatHistory.slice(-6)
-        })
-      });
-
-      const data = await res.json();
-      assistantBubble.remove();
-
-      appendAssistantAnswer(data.answer, data.citations, data.is_grounded);
-      state.chatHistory.push({ role: 'assistant', content: data.answer });
-
-    } catch (err) {
-      assistantBubble.remove();
-      appendAssistantAnswer("⚠️ An error occurred while communicating with the AI agent service.", [], false);
-    }
-  }
-
-  function appendMessage(role, text) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `chat-message ${role}-msg`;
-    msgDiv.innerHTML = `
-      <div class="msg-avatar">${role === 'user' ? '👤' : '🤖'}</div>
-      <div class="msg-body">
-        <div class="msg-text">${escapeHtml(text)}</div>
-      </div>
-    `;
-    elements.chatViewport.appendChild(msgDiv);
-    elements.chatViewport.scrollTop = elements.chatViewport.scrollHeight;
-    return msgDiv;
-  }
-
-  function appendLoadingMessage() {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'chat-message assistant-msg';
-    msgDiv.innerHTML = `
-      <div class="msg-avatar">🤖</div>
-      <div class="msg-body">
-        <div class="msg-text"><em>AI Agent is thinking and synthesizing response...</em></div>
-      </div>
-    `;
-    elements.chatViewport.appendChild(msgDiv);
-    elements.chatViewport.scrollTop = elements.chatViewport.scrollHeight;
-    return msgDiv;
-  }
-
-  function appendAssistantAnswer(markdownText, citations = [], isGrounded = true) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'chat-message assistant-msg';
-
-    const htmlContent = window.marked ? window.marked.parse(markdownText) : markdownText;
-
-    let citationsHtml = '';
-    if (citations && citations.length > 0) {
-      const cardsHtml = citations.map(c => `
-        <div class="citation-card">
-          <div class="citation-card-header">
-            <span>📄 ${escapeHtml(c.source)} — Page ${c.page}</span>
-            <span>Relevance: ${Math.round((c.similarity || 0) * 100)}%</span>
-          </div>
-          <div class="citation-card-snippet">"${escapeHtml(c.snippet || '')}"</div>
-        </div>
-      `).join('');
-
-      citationsHtml = `
-        <div class="citations-wrapper">
-          <details open>
-            <summary class="citations-toggle">📖 Verified Course References (${citations.length})</summary>
-            <div class="citations-list">${cardsHtml}</div>
-          </details>
-        </div>
-      `;
-    }
-
-    const badgeLabel = citations.length > 0 ? 'Course Grounded' : (state.mode === 'agent' ? 'ChatGPT Agent' : 'Out of Syllabus');
-    const badgeClass = isGrounded ? 'badge-grounded' : 'badge-danger';
-
-    msgDiv.innerHTML = `
-      <div class="msg-avatar">🤖</div>
-      <div class="msg-body">
-        <div class="msg-header">
-          <strong>AI Agent (${elements.personaSelect.options[elements.personaSelect.selectedIndex].text})</strong>
-          <span class="badge ${badgeClass}">${badgeLabel}</span>
-        </div>
-        <div class="msg-text">${htmlContent}</div>
-        ${citationsHtml}
-      </div>
-    `;
-
-    elements.chatViewport.appendChild(msgDiv);
-    renderMath(msgDiv);
-    elements.chatViewport.scrollTop = elements.chatViewport.scrollHeight;
-  }
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  // ---------------------------------------------------------
-  // TAB 2: Exam & Quiz Arena
-  // ---------------------------------------------------------
-  async function generateExam() {
-    const topic = elements.quizTopicInput.value.trim() || 'General Syllabus';
-    const numQuestions = parseInt(elements.quizCountSelect.value, 10);
-    const difficulty = elements.quizDiffSelect.value;
-    const quizType = elements.quizTypeSelect.value;
-
-    elements.activeQuizArea.style.display = 'block';
-    elements.activeQuizArea.innerHTML = `
-      <div class="panel-card text-center" style="padding: 3rem;">
-        <p>Analyzing course materials and generating ${numQuestions} ${quizType} exam questions for <strong>${topic}</strong>...</p>
-      </div>`;
-    elements.quizResultsArea.style.display = 'none';
+    this.quizContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><h3>Generating Assessment Questions...</h3></div>';
+    this.quizResults.style.display = 'none';
+    this.quizFooter.style.display = 'none';
+    this.btnExportWorksheet.style.display = 'none';
 
     try {
       const res = await fetch('/api/quiz/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: topic,
-          num_questions: numQuestions,
-          difficulty: difficulty,
-          quiz_type: quizType,
-          filter_source: elements.docFilterSelect.value
-        })
+        body: JSON.stringify({ topic, num_questions: num, difficulty: diff, quiz_type: qType })
       });
-
       const data = await res.json();
-      state.activeQuiz = data;
-      renderActiveQuiz(data);
-    } catch (err) {
-      elements.activeQuizArea.innerHTML = `
-        <div class="panel-card text-center text-muted">
-          <p>Failed to generate exam questions. Please ensure documents are uploaded.</p>
-        </div>`;
+      this.activeQuiz = data.quiz;
+      this.renderQuiz(data.quiz, qType);
+    } catch (e) {
+      this.quizContainer.innerHTML = '<div class="empty-state"><p style="color:#ef4444;">Failed to generate quiz.</p></div>';
     }
   }
 
-  function renderActiveQuiz(quizData) {
-    const questions = quizData.quiz || [];
-    if (questions.length === 0) {
-      elements.activeQuizArea.innerHTML = `
-        <div class="panel-card text-center text-muted">
-          <p>No questions could be generated for this topic. Upload materials in the Document Hub.</p>
-        </div>`;
+  renderQuiz(questions, qType) {
+    if (!questions || questions.length === 0) {
+      this.quizContainer.innerHTML = '<div class="empty-state"><p>No questions generated.</p></div>';
       return;
     }
 
-    if (quizData.type === 'DESCRIPTIVE') {
-      elements.activeQuizArea.innerHTML = `
-        <div class="panel-card">
-          <div class="panel-header">
-            <h2>📖 Descriptive Conceptual Problems (${questions.length} Questions)</h2>
-          </div>
-          ${questions.map((q, idx) => `
-            <div class="quiz-question-card">
-              <div class="qq-number">Problem ${q.id || idx + 1} [${q.max_marks || 5} Marks]</div>
-              <div class="qq-title">${escapeHtml(q.question)}</div>
-              <details style="margin-top: 1rem;">
-                <summary style="color: var(--color-primary); cursor: pointer; font-weight: 600;">
-                  👁️ Reveal Model Answer & Grading Rubric
-                </summary>
-                <div style="background: var(--color-bg); padding: 1rem; border-radius: 6px; margin-top: 0.5rem;">
-                  <p><strong>Model Answer:</strong></p>
-                  <p>${escapeHtml(q.model_answer || '')}</p>
-                  <p style="margin-top: 0.5rem;"><strong>Required Key Points:</strong></p>
-                  <ul>${(q.key_points || []).map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
-                  <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--color-text-muted);">
-                    <em>Citation: [Doc: ${q.source_doc}, Page: ${q.source_page}]</em>
-                  </p>
-                </div>
-              </details>
-            </div>
-          `).join('')}
-        </div>
-      `;
-      renderMath(elements.activeQuizArea);
-      return;
-    }
+    this.btnExportWorksheet.style.display = 'inline-block';
+    this.quizContainer.innerHTML = '';
 
-    // MCQ Format
-    elements.activeQuizArea.innerHTML = `
-      <div class="panel-card">
-        <div class="panel-header">
-          <h2>✍️ Active Exam Arena (${questions.length} MCQs)</h2>
-          <p>Select your answer for each question and submit for instant auto-grading and rationale review.</p>
-        </div>
-        <form id="exam-submission-form">
-          ${questions.map((q, idx) => `
-            <div class="quiz-question-card">
-              <div class="qq-number">Question ${q.id || idx + 1}</div>
-              <div class="qq-title">${escapeHtml(q.question)}</div>
-              <div class="qq-options-list">
-                ${(q.options || []).map(opt => `
-                  <label class="option-label">
-                    <input type="radio" name="q_${q.id || idx + 1}" value="${escapeHtml(opt)}" required>
-                    <span>${escapeHtml(opt)}</span>
-                  </label>
-                `).join('')}
+    questions.forEach((q, idx) => {
+      const card = document.createElement('div');
+      card.className = 'question-card';
+      let optionsHtml = '';
+
+      if (qType === 'MCQ' && q.options) {
+        optionsHtml = `
+          <div class="options-list" data-qid="${q.id}">
+            ${Object.entries(q.options).map(([k, v]) => `
+              <div class="option-item" data-opt="${k}">
+                <strong>(${k})</strong> ${this.escapeHtml(v)}
               </div>
-            </div>
-          `).join('')}
-          <button type="submit" class="btn btn-primary btn-block" style="padding: 0.85rem; font-size: 1rem; margin-top: 1rem;">
-            📊 Submit Exam for Instant Auto-Grading
-          </button>
-        </form>
-      </div>
-    `;
+            `).join('')}
+          </div>
+        `;
+      } else {
+        optionsHtml = `
+          <div class="descriptive-field">
+            <textarea class="styled-input" rows="3" placeholder="Write your derivation or answer here..." style="width:100%;"></textarea>
+          </div>
+        `;
+      }
 
-    renderMath(elements.activeQuizArea);
+      card.innerHTML = `
+        <div class="question-text"><strong>Q${idx + 1}:</strong> ${this.escapeHtml(q.question)}</div>
+        ${optionsHtml}
+      `;
+      this.quizContainer.appendChild(card);
+    });
 
-    const examForm = document.getElementById('exam-submission-form');
-    if (examForm) {
-      examForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(examForm);
-        const userAnswers = {};
-        questions.forEach(q => {
-          const key = `q_${q.id}`;
-          userAnswers[q.id] = formData.get(key) || '';
+    // Add option select listeners for MCQs
+    if (qType === 'MCQ') {
+      this.quizContainer.querySelectorAll('.option-item').forEach(opt => {
+        opt.addEventListener('click', () => {
+          const parent = opt.closest('.options-list');
+          parent.querySelectorAll('.option-item').forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
         });
-        await submitExamForGrading(questions, userAnswers);
       });
+      this.quizFooter.style.display = 'block';
+    } else {
+      this.quizFooter.style.display = 'none';
     }
   }
 
-  async function submitExamForGrading(questions, userAnswers) {
+  async submitQuiz() {
+    if (!this.activeQuiz) return;
+    const userAnswers = {};
+    this.quizContainer.querySelectorAll('.options-list').forEach(list => {
+      const qid = parseInt(list.dataset.qid);
+      const selected = list.querySelector('.option-item.selected');
+      if (selected) userAnswers[qid] = selected.dataset.opt;
+    });
+
     try {
       const res = await fetch('/api/quiz/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quiz: questions, user_answers: userAnswers })
+        body: JSON.stringify({ quiz: this.activeQuiz, user_answers: userAnswers })
       });
-
       const result = await res.json();
-      renderScorecard(result);
-    } catch (err) {
-      showToast('Error grading exam');
+      this.renderScorecard(result);
+    } catch (e) {
+      console.error(e);
     }
   }
 
-  function renderScorecard(result) {
-    elements.quizResultsArea.style.display = 'block';
-    elements.quizResultsArea.innerHTML = `
-      <div class="panel-card">
-        <div class="panel-header">
-          <h2>🏆 Exam Performance & Scorecard</h2>
-        </div>
-        <div class="scorecard-banner">
-          <div>
-            <div class="sc-metric-val">${result.score_percentage}%</div>
-            <div class="sc-metric-lbl">Score Percentage</div>
-          </div>
-          <div>
-            <div class="sc-metric-val">${result.correct_count} / ${result.total_questions}</div>
-            <div class="sc-metric-lbl">Correct Answers</div>
-          </div>
-          <div>
-            <div class="sc-metric-val">Grade ${result.grade}</div>
-            <div class="sc-metric-lbl">Assessment Level</div>
-          </div>
-        </div>
-
-        <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">🔍 Detailed Answer Rationales & Source References</h3>
-        <div class="review-list">
-          ${(result.feedback || []).map(fb => `
-            <div class="review-item ${fb.is_correct ? 'review-correct' : 'review-incorrect'}">
-              <div class="review-header">
-                <span>${fb.is_correct ? '✅' : '❌'} Q${fb.id}: ${escapeHtml(fb.question)}</span>
-                <span>${fb.is_correct ? 'Correct (+1)' : 'Incorrect (0)'}</span>
-              </div>
-              <div class="review-body">
-                <p><strong>Your Selected Answer:</strong> ${escapeHtml(fb.user_answer)}</p>
-                <p><strong>Correct Option:</strong> Option ${escapeHtml(fb.correct_answer)}</p>
-                <p style="margin-top: 0.5rem;"><strong>Step-by-Step Rationale:</strong> ${escapeHtml(fb.explanation)}</p>
-                <div class="citation-card" style="margin-top: 0.75rem;">
-                  <strong>Verified Textbook Reference:</strong> ${escapeHtml(fb.source_doc)} — Page ${fb.source_page}
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
+  renderScorecard(res) {
+    this.quizResults.style.display = 'block';
+    this.quizResults.innerHTML = `
+      <div class="scorecard">
+        <h3>Exam Performance Scorecard</h3>
+        <div class="score-badge">${res.score_percentage}%</div>
+        <p><strong>Grade:</strong> ${res.grade} | Correct: ${res.correct_count} / ${res.total_questions}</p>
       </div>
     `;
-
-    renderMath(elements.quizResultsArea);
-    elements.quizResultsArea.scrollIntoView({ behavior: 'smooth' });
+    this.quizResults.scrollIntoView({ behavior: 'smooth' });
   }
 
-  // ---------------------------------------------------------
-  // TAB 4: Revision & Flashcards
-  // ---------------------------------------------------------
-  async function generateFlashcardsDeck() {
-    const topic = elements.fcTopicInput.value.trim() || 'Key Concepts';
-    elements.fcQuestion.textContent = `Extracting key definitions & formulas for ${topic}...`;
-    elements.fcAnswer.textContent = '';
-    elements.flashcardElement.classList.remove('is-flipped');
+  async exportWorksheet() {
+    if (!this.activeQuiz) return;
+    const topic = document.getElementById('quiz-topic')?.value || 'Academic Practice Exam';
+    const qType = document.getElementById('quiz-type')?.value || 'MCQ';
+
+    try {
+      const res = await fetch('/api/quiz/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quiz: this.activeQuiz, topic, quiz_type: qType, include_answers: true })
+      });
+      const data = await res.json();
+      
+      // Trigger download
+      const blob = new Blob([data.markdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Failed to export worksheet.');
+    }
+  }
+
+  /* --- FLASHCARDS & REVISION --- */
+  async generateFlashcards() {
+    const topic = document.getElementById('flashcard-topic')?.value || 'Core Concepts';
+    this.flashcardsContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><h3>Building 3D Flashcard Deck...</h3></div>';
 
     try {
       const res = await fetch('/api/flashcards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: topic,
-          num_cards: 6,
-          filter_source: elements.docFilterSelect.value
-        })
+        body: JSON.stringify({ topic, num_cards: 6 })
+      });
+      const data = await res.json();
+      this.renderFlashcards(data.flashcards);
+    } catch {
+      this.flashcardsContainer.innerHTML = '<div class="empty-state"><p>Failed to generate cards.</p></div>';
+    }
+  }
+
+  renderFlashcards(cards) {
+    if (!cards || cards.length === 0) return;
+    this.flashcardsContainer.innerHTML = '';
+
+    cards.forEach((c, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'flashcard-wrapper';
+      wrap.innerHTML = `
+        <div class="flashcard-inner">
+          <div class="flashcard-front">
+            <span class="card-badge">Card ${idx + 1}</span>
+            <h4>${this.escapeHtml(c.front)}</h4>
+            <span class="flip-hint">👆 Click to Flip</span>
+          </div>
+          <div class="flashcard-back">
+            <p>${this.escapeHtml(c.back)}</p>
+            <div class="card-rating-bar">
+              <button class="rating-btn" title="Mastered">🟢 Easy</button>
+              <button class="rating-btn" title="Reviewing">🟡 Med</button>
+              <button class="rating-btn" title="Need Practice">🔴 Hard</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      wrap.querySelector('.flashcard-inner').addEventListener('click', (e) => {
+        if (!e.target.classList.contains('rating-btn')) {
+          wrap.classList.toggle('flipped');
+        }
       });
 
-      const data = await res.json();
-      state.flashcards = data.flashcards || [];
-      state.currentFlashcardIndex = 0;
-      updateFlashcardUI();
-    } catch (err) {
-      showToast('Error generating flashcards');
-    }
+      this.flashcardsContainer.appendChild(wrap);
+    });
   }
 
-  function updateFlashcardUI() {
-    const cards = state.flashcards;
-    const idx = state.currentFlashcardIndex;
-
-    if (!cards || cards.length === 0) {
-      elements.fcBadge.textContent = 'Concept #0';
-      elements.fcQuestion.textContent = 'No flashcards available. Click Generate Deck!';
-      elements.fcAnswer.textContent = '';
-      elements.fcCounter.textContent = 'Card 0 of 0';
-      elements.btnPrevFc.disabled = true;
-      elements.btnNextFc.disabled = true;
-      return;
-    }
-
-    const currentCard = cards[idx];
-    elements.flashcardElement.classList.remove('is-flipped');
-    state.isCardFlipped = false;
-
-    elements.fcBadge.textContent = `📌 ${currentCard.topic || 'Concept'} — #${idx + 1}`;
-    elements.fcQuestion.textContent = currentCard.front || '';
-    elements.fcAnswer.innerHTML = `
-      <strong>💡 Key Principle / Formula:</strong><br/>
-      ${escapeHtml(currentCard.back || '')}<br/><br/>
-      <em>Source: ${escapeHtml(currentCard.source_doc || 'Syllabus')} (Page ${currentCard.source_page || 1})</em>
-    `;
-    elements.fcCounter.textContent = `Card ${idx + 1} of ${cards.length}`;
-
-    elements.btnPrevFc.disabled = (idx === 0);
-    elements.btnNextFc.disabled = (idx === cards.length - 1);
-
-    renderMath(elements.flashcardElement);
-  }
-
-  async function generateCheatSheet() {
-    elements.cheatsheetContent.innerHTML = '<p class="text-muted">Compiling comprehensive syllabus notes and equations...</p>';
-    elements.cheatsheetActions.style.display = 'none';
-
+  async generateCheatsheet() {
     try {
       const res = await fetch('/api/cheatsheet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filter_source: elements.docFilterSelect.value })
+        body: JSON.stringify({})
       });
-
       const data = await res.json();
-      state.cheatSheetMarkdown = data.cheatsheet || '';
-
-      const html = window.marked ? window.marked.parse(state.cheatSheetMarkdown) : state.cheatSheetMarkdown;
-      elements.cheatsheetContent.innerHTML = html;
-      elements.cheatsheetActions.style.display = 'block';
-      renderMath(elements.cheatsheetContent);
-    } catch (err) {
-      elements.cheatsheetContent.innerHTML = '<p class="text-danger">Failed to generate revision cheat-sheet.</p>';
-    }
+      this.cheatsheetOutput.style.display = 'block';
+      this.cheatsheetContent.innerHTML = this.renderMarkdown(data.cheatsheet);
+      this.cheatsheetContent.scrollIntoView({ behavior: 'smooth' });
+    } catch {}
   }
 
-  function downloadCheatSheet() {
-    if (!state.cheatSheetMarkdown) return;
-    const blob = new Blob([state.cheatSheetMarkdown], { type: 'text/markdown' });
+  downloadCheatsheet() {
+    const text = this.cheatsheetContent.innerText;
+    const blob = new Blob([text], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'syllabus_revision_notes.md';
+    a.download = 'High_Yield_Revision_Cheatsheet.md';
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  // ---------------------------------------------------------
-  // Event Listeners
-  // ---------------------------------------------------------
-  function setupEventListeners() {
-    // Mode Switching
-    elements.modeAgentBtn.addEventListener('click', () => {
-      state.mode = 'agent';
-      elements.modeAgentBtn.classList.add('active');
-      elements.modeStrictBtn.classList.remove('active');
-      elements.activeModeTag.textContent = '🤖 Mode: ChatGPT AI Agent';
-      showToast('Switched to ChatGPT AI Agent Mode (Answers any question)');
-    });
+  /* --- SYSTEM STATUS & DOCS --- */
+  async fetchSystemStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      if (this.docCountBadge) this.docCountBadge.innerText = data.total_documents;
+      if (this.statusDot) this.statusDot.className = 'status-dot online';
+      if (this.statusText) this.statusText.innerText = `${data.total_documents} Docs (${data.total_chunks} Chunks)`;
 
-    elements.modeStrictBtn.addEventListener('click', () => {
-      state.mode = 'strict';
-      elements.modeStrictBtn.classList.add('active');
-      elements.modeAgentBtn.classList.remove('active');
-      elements.activeModeTag.textContent = '🎓 Mode: Strict Syllabus-Only';
-      showToast('Switched to Strict Syllabus Mode (Locked to course materials)');
-    });
-
-    // Persona Selector
-    elements.personaSelect.addEventListener('change', (e) => {
-      state.persona = e.target.value;
-      const personaText = elements.personaSelect.options[elements.personaSelect.selectedIndex].text;
-      elements.activePersonaTag.textContent = `Persona: ${personaText.split(' ')[1] || personaText}`;
-      showToast(`AI Persona updated to: ${personaText}`);
-    });
-
-    // Tab Switching
-    elements.tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tabId = btn.getAttribute('data-tab');
-        elements.tabBtns.forEach(b => {
-          b.classList.remove('active');
-          b.setAttribute('aria-selected', 'false');
+      // Populate filter dropdowns
+      if (this.chatDocFilter) {
+        this.chatDocFilter.innerHTML = '<option value="All Documents">All Syllabus Documents</option>';
+        data.documents.forEach(d => {
+          this.chatDocFilter.innerHTML += `<option value="${d.source}">${d.source}</option>`;
         });
-        elements.tabViews.forEach(v => v.classList.remove('active'));
-
-        btn.classList.add('active');
-        btn.setAttribute('aria-selected', 'true');
-        const activeView = document.getElementById(`view-${tabId}`);
-        if (activeView) activeView.classList.add('active');
-      });
-    });
-
-    // Quick Prompts
-    elements.promptChips.forEach(chip => {
-      chip.addEventListener('click', () => {
-        const promptText = chip.getAttribute('data-prompt');
-        submitChatMessage(promptText);
-      });
-    });
-
-    // Chat Form Submit
-    elements.chatForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      submitChatMessage(elements.chatInput.value);
-    });
-
-    // Chat Input Enter Key
-    elements.chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        elements.chatForm.dispatchEvent(new Event('submit'));
       }
-    });
 
-    // Load Sample Syllabus
-    elements.btnLoadSample.addEventListener('click', loadSampleMaterial);
-
-    // Clear Vector Store
-    elements.btnClearIndex.addEventListener('click', clearAllData);
-
-    // Dropzone & File Input
-    elements.dropzone.addEventListener('click', () => elements.fileInput.click());
-    elements.fileInput.addEventListener('change', (e) => handleFileUpload(e.target.files));
-
-    elements.dropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      elements.dropzone.classList.add('dragover');
-    });
-
-    elements.dropzone.addEventListener('dragleave', () => elements.dropzone.classList.remove('dragover'));
-    elements.dropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      elements.dropzone.classList.remove('dragover');
-      handleFileUpload(e.dataTransfer.files);
-    });
-
-    // Quiz Generator Submit
-    elements.quizForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      generateExam();
-    });
-
-    // Flashcard Flip & Navigation
-    elements.flashcardElement.addEventListener('click', () => {
-      elements.flashcardElement.classList.toggle('is-flipped');
-      state.isCardFlipped = !state.isCardFlipped;
-    });
-
-    elements.btnGenerateFc.addEventListener('click', generateFlashcardsDeck);
-
-    elements.btnPrevFc.addEventListener('click', () => {
-      if (state.currentFlashcardIndex > 0) {
-        state.currentFlashcardIndex--;
-        updateFlashcardUI();
-      }
-    });
-
-    elements.btnNextFc.addEventListener('click', () => {
-      if (state.currentFlashcardIndex < state.flashcards.length - 1) {
-        state.currentFlashcardIndex++;
-        updateFlashcardUI();
-      }
-    });
-
-    // Cheat Sheet
-    elements.btnGenerateCheatsheet.addEventListener('click', generateCheatSheet);
-    elements.btnDownloadCheatsheet.addEventListener('click', downloadCheatSheet);
-
-    // Settings Modal
-    elements.btnOpenSettings.addEventListener('click', () => elements.settingsModal.style.display = 'flex');
-    elements.btnCloseModal.addEventListener('click', () => elements.settingsModal.style.display = 'none');
-    elements.settingsModal.addEventListener('click', (e) => {
-      if (e.target === elements.settingsModal) elements.settingsModal.style.display = 'none';
-    });
-
-    elements.btnSaveSettings.addEventListener('click', async () => {
-      const apiKey = elements.modalApiKey.value.trim();
-      const model = elements.modalModelSelect.value;
-      try {
-        await fetch('/api/config/key', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: apiKey, model_name: model })
-        });
-        showToast('Settings saved successfully!');
-        elements.settingsModal.style.display = 'none';
-        await fetchStatus();
-      } catch (err) {
-        showToast('Error saving settings');
-      }
-    });
+      this.renderDocsTable(data.documents);
+    } catch {
+      if (this.statusDot) this.statusDot.className = 'status-dot';
+      if (this.statusText) this.statusText.innerText = 'Engine Offline';
+    }
   }
 
-  // ---------------------------------------------------------
-  // Initialization
-  // ---------------------------------------------------------
-  setupEventListeners();
-  fetchStatus();
+  renderDocsTable(docs) {
+    if (!this.docsTableContainer) return;
+    if (!docs || docs.length === 0) {
+      this.docsTableContainer.innerHTML = '<div class="empty-state"><p>No documents uploaded yet.</p></div>';
+      return;
+    }
+
+    let html = '<div class="doc-items-list">';
+    docs.forEach(d => {
+      html += `
+        <div class="doc-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border-color);">
+          <div>
+            <strong>📄 ${this.escapeHtml(d.source)}</strong>
+            <div style="font-size:12px; color:var(--text-muted);">${d.total_pages} Pages | ${d.chunk_count} Chunks</div>
+          </div>
+          <button class="danger-btn text-btn" onclick="app.deleteDoc('${d.source}')">Delete</button>
+        </div>
+      `;
+    });
+    html += '</div>';
+    this.docsTableContainer.innerHTML = html;
+  }
+
+  async deleteDoc(sourceName) {
+    if (!confirm(`Remove "${sourceName}" from syllabus index?`)) return;
+    await fetch(`/api/documents/${encodeURIComponent(sourceName)}`, { method: 'DELETE' });
+    this.fetchSystemStatus();
+  }
+
+  async uploadFiles(files) {
+    if (!files || files.length === 0) return;
+    const formData = new FormData();
+    for (let f of files) formData.append('files', f);
+
+    try {
+      await fetch('/api/upload', { method: 'POST', body: formData });
+      this.fetchSystemStatus();
+    } catch {}
+  }
+
+  async loadSampleMaterial() {
+    try {
+      await fetch('/api/sample/load', { method: 'POST' });
+      this.fetchSystemStatus();
+    } catch {}
+  }
+
+  async clearAllDocs() {
+    if (!confirm('Clear all indexed documents?')) return;
+    await fetch('/api/clear', { method: 'POST' });
+    this.fetchSystemStatus();
+  }
+
+  async saveSettings() {
+    const key = this.geminiKeyInput?.value?.trim();
+    const model = this.modelSelect?.value;
+    if (key) {
+      await fetch('/api/config/key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: key, model_name: model })
+      });
+    }
+    this.settingsModal.style.display = 'none';
+    this.fetchSystemStatus();
+  }
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+}
+
+// Instantiate on load
+let app;
+window.addEventListener('DOMContentLoaded', () => {
+  app = new SyllabusApp();
 });
