@@ -1,5 +1,7 @@
 /**
- * SyllabusAI — Frontend State, Streaming Client, Canvas Studio & Audio Podcast Controller
+ * SyllabusAI — Complete Frontend Application & Controller Suite
+ * Includes: Multi-Session Manager, SSE Streaming, Canvas Studio,
+ *           Citation Inspector, Audio Deep Dive Podcast Synthesizer
  */
 
 class AudioPodcastController {
@@ -11,9 +13,11 @@ class AudioPodcastController {
     this.playbackRate = 1.25;
     this.speechUtterance = null;
     this.animationFrameId = null;
+    this.availableVoices = [];
 
     this.initElements();
     this.initEvents();
+    this.initVoices();
   }
 
   initElements() {
@@ -42,10 +46,19 @@ class AudioPodcastController {
     this.speedSelect?.addEventListener('change', (e) => {
       this.playbackRate = parseFloat(e.target.value);
       if (this.isPlaying) {
-        window.speechSynthesis.cancel();
+        window.speechSynthesis?.cancel();
         this.playTurn(this.currentTurnIndex);
       }
     });
+  }
+
+  initVoices() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      this.availableVoices = window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        this.availableVoices = window.speechSynthesis.getVoices();
+      };
+    }
   }
 
   async generatePodcast() {
@@ -75,16 +88,19 @@ class AudioPodcastController {
     this.currentTurnIndex = 0;
     this.stopAudio();
 
-    if (this.titleDisplay) this.titleDisplay.innerText = podcastData.title;
-    if (this.summaryDisplay) this.summaryDisplay.innerText = podcastData.summary;
+    if (this.titleDisplay) this.titleDisplay.innerText = podcastData.title || 'Deep Dive Study Session';
+    if (this.summaryDisplay) this.summaryDisplay.innerText = podcastData.summary || '2-Host conversational masterclass';
     if (this.playerCard) this.playerCard.style.display = 'flex';
 
     this.renderTranscript(podcastData.dialogue);
     this.drawIdleWaveform();
+    
+    // Auto-start playback on generation
+    this.playTurn(0);
   }
 
   renderTranscript(dialogue) {
-    if (!this.transcriptContainer) return;
+    if (!this.transcriptContainer || !dialogue) return;
     this.transcriptContainer.innerHTML = '';
 
     dialogue.forEach((turn, idx) => {
@@ -126,7 +142,11 @@ class AudioPodcastController {
     const turn = this.currentPodcast.dialogue[index];
     const isAlex = turn.speaker === 'alex';
 
-    window.speechSynthesis.cancel();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+    }
+
     this.isPlaying = true;
     if (this.playIcon) this.playIcon.innerText = '⏸';
 
@@ -142,40 +162,51 @@ class AudioPodcastController {
     if (activeLine) activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     // Web Speech Synthesis
-    this.speechUtterance = new SpeechSynthesisUtterance(turn.text);
-    this.speechUtterance.rate = this.playbackRate;
-    this.speechUtterance.pitch = isAlex ? 1.15 : 0.88;
+    if ('speechSynthesis' in window) {
+      this.speechUtterance = new SpeechSynthesisUtterance(turn.text);
+      this.speechUtterance.rate = this.playbackRate;
+      this.speechUtterance.pitch = isAlex ? 1.15 : 0.88;
 
-    // Pick natural voice if available
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      if (isAlex) {
-        const femaleVoice = voices.find(v => v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Google US English') || v.name.includes('Female'));
-        if (femaleVoice) this.speechUtterance.voice = femaleVoice;
-      } else {
-        const maleVoice = voices.find(v => v.name.includes('David') || v.name.includes('Alex') || v.name.includes('Google UK English Male') || v.name.includes('Male'));
-        if (maleVoice) this.speechUtterance.voice = maleVoice;
+      if (this.availableVoices.length === 0) {
+        this.availableVoices = window.speechSynthesis.getVoices();
       }
+
+      if (this.availableVoices.length > 0) {
+        if (isAlex) {
+          const femaleVoice = this.availableVoices.find(v => v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Google US English') || v.name.includes('Female'));
+          if (femaleVoice) this.speechUtterance.voice = femaleVoice;
+        } else {
+          const maleVoice = this.availableVoices.find(v => v.name.includes('David') || v.name.includes('Alex') || v.name.includes('Google UK English Male') || v.name.includes('Male'));
+          if (maleVoice) this.speechUtterance.voice = maleVoice;
+        }
+      }
+
+      this.speechUtterance.onend = () => {
+        if (this.isPlaying) {
+          this.playTurn(index + 1);
+        }
+      };
+
+      this.speechUtterance.onerror = (err) => {
+        console.warn('SpeechSynthesis error:', err);
+        // Fallback simulation timer if browser audio is blocked
+        setTimeout(() => {
+          if (this.isPlaying) this.playTurn(index + 1);
+        }, (turn.text.split(' ').length / (2.5 * this.playbackRate)) * 1000);
+      };
+
+      window.speechSynthesis.speak(this.speechUtterance);
     }
 
-    this.speechUtterance.onend = () => {
-      if (this.isPlaying) {
-        this.playTurn(index + 1);
-      }
-    };
-
-    this.speechUtterance.onerror = () => {
-      this.stopAudio();
-    };
-
-    window.speechSynthesis.speak(this.speechUtterance);
     this.startWaveformAnimation();
   }
 
   pauseAudio() {
     this.isPlaying = false;
     if (this.playIcon) this.playIcon.innerText = '▶';
-    window.speechSynthesis.cancel();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     this.hostCardAlex?.classList.remove('speaking');
     this.hostCardTaylor?.classList.remove('speaking');
     this.stopWaveformAnimation();
@@ -494,7 +525,6 @@ class SyllabusApp {
     this.statusText = document.getElementById('status-text');
   }
 
-  /* --- THEME SYSTEM --- */
   initTheme() {
     document.documentElement.setAttribute('data-theme', this.currentTheme);
     if (this.themeSelect) this.themeSelect.value = this.currentTheme;
@@ -506,7 +536,6 @@ class SyllabusApp {
     localStorage.setItem('syllabus_theme', themeName);
   }
 
-  /* --- MULTI-SESSION CHAT MANAGER --- */
   createNewSessionId() {
     return 'session_' + Date.now();
   }
@@ -587,7 +616,6 @@ class SyllabusApp {
     });
   }
 
-  /* --- EVENT LISTENERS --- */
   initEventListeners() {
     this.themeSelect?.addEventListener('change', (e) => this.setTheme(e.target.value));
     this.modeAgentBtn?.addEventListener('click', () => this.setMode('agent'));
@@ -687,7 +715,6 @@ class SyllabusApp {
     this.tabPanes.forEach(p => p.classList.toggle('active', p.id === tabId));
   }
 
-  /* --- VOICE INPUT --- */
   initVoiceInput() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -729,7 +756,6 @@ class SyllabusApp {
     });
   }
 
-  /* --- CHAT STREAMING --- */
   renderActiveSessionMessages() {
     const activeSess = this.getActiveSession();
     if (!activeSess || activeSess.messages.length === 0) {
