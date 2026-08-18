@@ -217,6 +217,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+button, select, input, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
 html, body {
   height: 100%;
   background-color: var(--bg-base);
@@ -834,7 +839,9 @@ code, pre, .mono, kbd {
   text-align: left;
 }
 
-.prompt-chip {
+button.prompt-chip, .prompt-chip {
+  appearance: none;
+  -webkit-appearance: none;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -846,16 +853,19 @@ code, pre, .mono, kbd {
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   text-align: left;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  color: var(--text-main) !important;
+  font-family: inherit;
+  width: 100%;
 }
 
-.prompt-chip:hover {
+button.prompt-chip:hover, .prompt-chip:hover {
   background: var(--bg-tertiary);
   border-color: var(--border-active);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px var(--glow-primary);
 }
 
-.prompt-chip:active {
+button.prompt-chip:active, .prompt-chip:active {
   transform: scale(0.98);
 }
 
@@ -864,10 +874,17 @@ code, pre, .mono, kbd {
   flex-shrink: 0;
 }
 
+.chip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
 .chip-text strong {
   display: block;
   font-size: 13.5px;
-  color: var(--text-main);
+  color: var(--text-main) !important;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -875,10 +892,37 @@ code, pre, .mono, kbd {
 .chip-text small {
   display: block;
   font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 3px;
+  color: var(--text-secondary) !important;
+  margin-top: 2px;
   font-weight: 500;
   line-height: 1.4;
+}
+
+/* Explicit Dark Theme Contrast Guarantees */
+[data-theme="nebula"] .chip-text strong,
+[data-theme="sapphire"] .chip-text strong,
+[data-theme="emerald"] .chip-text strong,
+[data-theme="sunset"] .chip-text strong {
+  color: #ffffff !important;
+}
+
+[data-theme="nebula"] .chip-text small { color: #cbd5e1 !important; }
+[data-theme="sapphire"] .chip-text small { color: #bfdbfe !important; }
+[data-theme="emerald"] .chip-text small { color: #bbf7d0 !important; }
+[data-theme="sunset"] .chip-text small { color: #fecdd3 !important; }
+
+/* Explicit Daylight Theme Contrast Guarantees */
+[data-theme="daylight"] button.prompt-chip,
+[data-theme="daylight"] .prompt-chip {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+}
+[data-theme="daylight"] .chip-text strong {
+  color: #090d16 !important;
+}
+[data-theme="daylight"] .chip-text small {
+  color: #475569 !important;
 }
 
 /* Chat Message Bubbles */
