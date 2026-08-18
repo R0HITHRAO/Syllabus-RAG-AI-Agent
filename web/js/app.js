@@ -1,6 +1,271 @@
 /**
- * SyllabusAI — Frontend State, Streaming Client, Canvas Studio & Citation Inspector Controller
+ * SyllabusAI — Frontend State, Streaming Client, Canvas Studio & Audio Podcast Controller
  */
+
+class AudioPodcastController {
+  constructor(app) {
+    this.app = app;
+    this.currentPodcast = null;
+    this.currentTurnIndex = 0;
+    this.isPlaying = false;
+    this.playbackRate = 1.25;
+    this.speechUtterance = null;
+    this.animationFrameId = null;
+
+    this.initElements();
+    this.initEvents();
+  }
+
+  initElements() {
+    this.topicInput = document.getElementById('podcast-topic-input');
+    this.btnGenerate = document.getElementById('btn-generate-podcast');
+    this.playerCard = document.getElementById('podcast-player-card');
+    this.titleDisplay = document.getElementById('podcast-title-display');
+    this.summaryDisplay = document.getElementById('podcast-summary-display');
+    this.speedSelect = document.getElementById('podcast-speed-select');
+    this.btnPlay = document.getElementById('btn-play-podcast');
+    this.playIcon = document.getElementById('play-btn-icon');
+    this.btnRewind = document.getElementById('btn-rewind-podcast');
+    this.btnForward = document.getElementById('btn-forward-podcast');
+    this.hostCardAlex = document.getElementById('host-card-alex');
+    this.hostCardTaylor = document.getElementById('host-card-taylor');
+    this.transcriptContainer = document.getElementById('transcript-lines-container');
+    this.canvas = document.getElementById('audio-waveform-canvas');
+    this.canvasCtx = this.canvas?.getContext('2d');
+  }
+
+  initEvents() {
+    this.btnGenerate?.addEventListener('click', () => this.generatePodcast());
+    this.btnPlay?.addEventListener('click', () => this.togglePlay());
+    this.btnRewind?.addEventListener('click', () => this.skipTurn(-1));
+    this.btnForward?.addEventListener('click', () => this.skipTurn(1));
+    this.speedSelect?.addEventListener('change', (e) => {
+      this.playbackRate = parseFloat(e.target.value);
+      if (this.isPlaying) {
+        window.speechSynthesis.cancel();
+        this.playTurn(this.currentTurnIndex);
+      }
+    });
+  }
+
+  async generatePodcast() {
+    const topic = this.topicInput?.value.trim() || 'Operating Systems & Memory Management';
+    this.btnGenerate.disabled = true;
+    this.btnGenerate.innerHTML = '<span>⏳ Synthesizing Deep Dive...</span>';
+
+    try {
+      const res = await fetch('/api/podcast/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic })
+      });
+      const data = await res.json();
+      this.loadPodcast(data);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to generate podcast.');
+    } finally {
+      this.btnGenerate.disabled = false;
+      this.btnGenerate.innerHTML = '<span>⚡ Generate Audio Deep Dive</span>';
+    }
+  }
+
+  loadPodcast(podcastData) {
+    this.currentPodcast = podcastData;
+    this.currentTurnIndex = 0;
+    this.stopAudio();
+
+    if (this.titleDisplay) this.titleDisplay.innerText = podcastData.title;
+    if (this.summaryDisplay) this.summaryDisplay.innerText = podcastData.summary;
+    if (this.playerCard) this.playerCard.style.display = 'flex';
+
+    this.renderTranscript(podcastData.dialogue);
+    this.drawIdleWaveform();
+  }
+
+  renderTranscript(dialogue) {
+    if (!this.transcriptContainer) return;
+    this.transcriptContainer.innerHTML = '';
+
+    dialogue.forEach((turn, idx) => {
+      const isAlex = turn.speaker === 'alex';
+      const speakerName = isAlex ? 'Alex 🎙️' : 'Taylor 🎧';
+      const turnEl = document.createElement('div');
+      turnEl.className = `transcript-turn ${isAlex ? 'alex-turn' : 'taylor-turn'}`;
+      turnEl.id = `transcript-turn-${idx}`;
+      turnEl.innerHTML = `
+        <div class="speaker-badge ${isAlex ? 'speaker-alex' : 'speaker-taylor'}">${speakerName}</div>
+        <div class="spoken-text">${this.app.escapeHtml(turn.text)}</div>
+      `;
+      turnEl.addEventListener('click', () => {
+        this.currentTurnIndex = idx;
+        this.playTurn(idx);
+      });
+      this.transcriptContainer.appendChild(turnEl);
+    });
+  }
+
+  togglePlay() {
+    if (!this.currentPodcast) return;
+    if (this.isPlaying) {
+      this.pauseAudio();
+    } else {
+      this.playTurn(this.currentTurnIndex);
+    }
+  }
+
+  playTurn(index) {
+    if (!this.currentPodcast || !this.currentPodcast.dialogue) return;
+    if (index >= this.currentPodcast.dialogue.length) {
+      this.stopAudio();
+      this.currentTurnIndex = 0;
+      return;
+    }
+
+    this.currentTurnIndex = index;
+    const turn = this.currentPodcast.dialogue[index];
+    const isAlex = turn.speaker === 'alex';
+
+    window.speechSynthesis.cancel();
+    this.isPlaying = true;
+    if (this.playIcon) this.playIcon.innerText = '⏸';
+
+    // Highlight Active Speaker Card
+    this.hostCardAlex?.classList.toggle('speaking', isAlex);
+    this.hostCardTaylor?.classList.toggle('speaking', !isAlex);
+
+    // Highlight Transcript Line & Scroll
+    document.querySelectorAll('.transcript-turn').forEach((el, idx) => {
+      el.classList.toggle('active-speaking', idx === index);
+    });
+    const activeLine = document.getElementById(`transcript-turn-${index}`);
+    if (activeLine) activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Web Speech Synthesis
+    this.speechUtterance = new SpeechSynthesisUtterance(turn.text);
+    this.speechUtterance.rate = this.playbackRate;
+    this.speechUtterance.pitch = isAlex ? 1.15 : 0.88;
+
+    // Pick natural voice if available
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      if (isAlex) {
+        const femaleVoice = voices.find(v => v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Google US English') || v.name.includes('Female'));
+        if (femaleVoice) this.speechUtterance.voice = femaleVoice;
+      } else {
+        const maleVoice = voices.find(v => v.name.includes('David') || v.name.includes('Alex') || v.name.includes('Google UK English Male') || v.name.includes('Male'));
+        if (maleVoice) this.speechUtterance.voice = maleVoice;
+      }
+    }
+
+    this.speechUtterance.onend = () => {
+      if (this.isPlaying) {
+        this.playTurn(index + 1);
+      }
+    };
+
+    this.speechUtterance.onerror = () => {
+      this.stopAudio();
+    };
+
+    window.speechSynthesis.speak(this.speechUtterance);
+    this.startWaveformAnimation();
+  }
+
+  pauseAudio() {
+    this.isPlaying = false;
+    if (this.playIcon) this.playIcon.innerText = '▶';
+    window.speechSynthesis.cancel();
+    this.hostCardAlex?.classList.remove('speaking');
+    this.hostCardTaylor?.classList.remove('speaking');
+    this.stopWaveformAnimation();
+  }
+
+  stopAudio() {
+    this.pauseAudio();
+    this.drawIdleWaveform();
+  }
+
+  skipTurn(direction) {
+    if (!this.currentPodcast) return;
+    let nextIndex = this.currentTurnIndex + direction;
+    if (nextIndex < 0) nextIndex = 0;
+    if (nextIndex >= this.currentPodcast.dialogue.length) nextIndex = 0;
+    this.playTurn(nextIndex);
+  }
+
+  /* --- ANIMATED AUDIO WAVEFORM --- */
+  startWaveformAnimation() {
+    this.stopWaveformAnimation();
+    const render = (time) => {
+      this.drawActiveWaveform(time);
+      if (this.isPlaying) {
+        this.animationFrameId = requestAnimationFrame(render);
+      }
+    };
+    this.animationFrameId = requestAnimationFrame(render);
+  }
+
+  stopWaveformAnimation() {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
+  drawActiveWaveform(time) {
+    if (!this.canvasCtx || !this.canvas) return;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const ctx = this.canvasCtx;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const barCount = 32;
+    const barWidth = 6;
+    const gap = (width - barCount * barWidth) / (barCount - 1);
+
+    const gradient = ctx.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, '#8b5cf6');
+    gradient.addColorStop(0.5, '#06b6d4');
+    gradient.addColorStop(1, '#38bdf8');
+    ctx.fillStyle = gradient;
+
+    for (let i = 0; i < barCount; i++) {
+      const frequency = (i / barCount) * Math.PI * 4;
+      const noise = Math.sin(time * 0.006 + frequency) * 0.5 + 0.5;
+      const waveHeight = Math.max(8, noise * (height - 10));
+      const x = i * (barWidth + gap);
+      const y = (height - waveHeight) / 2;
+
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, waveHeight, 3);
+      ctx.fill();
+    }
+  }
+
+  drawIdleWaveform() {
+    if (!this.canvasCtx || !this.canvas) return;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const ctx = this.canvasCtx;
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
+
+    const barCount = 32;
+    const barWidth = 6;
+    const gap = (width - barCount * barWidth) / (barCount - 1);
+
+    for (let i = 0; i < barCount; i++) {
+      const x = i * (barWidth + gap);
+      const y = (height - 6) / 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, 6, 3);
+      ctx.fill();
+    }
+  }
+}
 
 class CanvasStudio {
   constructor(app) {
@@ -10,23 +275,18 @@ class CanvasStudio {
     this.tabs = document.querySelectorAll('.canvas-tab');
     this.panes = document.querySelectorAll('.studio-pane');
 
-    // Code Studio Elements
     this.codeEditor = document.getElementById('canvas-code-editor');
     this.codeLangTag = document.getElementById('code-lang-tag');
     this.btnRunCode = document.getElementById('btn-run-code');
     this.consoleOutput = document.getElementById('console-output');
 
-    // Inspector Elements
     this.inspectorDocName = document.getElementById('inspector-doc-name');
     this.inspectorPageNum = document.getElementById('inspector-page-num');
     this.inspectorSimScore = document.getElementById('inspector-sim-score');
     this.inspectorMeterFill = document.getElementById('inspector-meter-fill');
     this.inspectorHighlightedText = document.getElementById('inspector-highlighted-text');
 
-    // Notes Elements
     this.notesContent = document.getElementById('canvas-notes-content');
-
-    // Action Buttons
     this.btnClose = document.getElementById('btn-close-canvas');
     this.btnCopy = document.getElementById('btn-copy-canvas');
 
@@ -103,21 +363,18 @@ class CanvasStudio {
     const startTime = performance.now();
 
     try {
-      // If Javascript / Generic
       let logs = [];
       const mockConsole = {
         log: (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')),
         error: (...args) => logs.push('ERROR: ' + args.join(' '))
       };
 
-      // Safe JS execution or Python simulation interpreter
       if (this.codeLangTag.innerText.toLowerCase() === 'javascript') {
         const runFn = new Function('console', code);
         runFn(mockConsole);
         const duration = (performance.now() - startTime).toFixed(2);
         this.consoleOutput.innerText = logs.join('\n') + `\n\n[Process completed successfully in ${duration}ms]`;
       } else {
-        // Python algorithm simulator
         const duration = (performance.now() - startTime).toFixed(2);
         let simulationSummary = `[Python 3.11 Runtime Simulation]\n`;
         if (code.includes('reverse_linked_list') || code.includes('ListNode')) {
@@ -176,6 +433,7 @@ class SyllabusApp {
 
     this.initElements();
     this.canvas = new CanvasStudio(this);
+    this.podcast = new AudioPodcastController(this);
     this.initTheme();
     this.initEventListeners();
     this.initVoiceInput();
@@ -366,7 +624,6 @@ class SyllabusApp {
       }
     });
 
-    // Prompt Chips in Welcome Hero
     document.addEventListener('click', (e) => {
       if (e.target.classList.contains('prompt-chip')) {
         const query = e.target.dataset.query;
@@ -377,12 +634,10 @@ class SyllabusApp {
       }
     });
 
-    // Exam Arena
     this.btnGenerateQuiz?.addEventListener('click', () => this.generateQuiz());
     this.btnSubmitQuiz?.addEventListener('click', () => this.submitQuiz());
     this.btnExportWorksheet?.addEventListener('click', () => this.exportWorksheet());
 
-    // Document Hub
     this.dropZone?.addEventListener('click', () => this.fileInput?.click());
     this.fileInput?.addEventListener('change', (e) => this.uploadFiles(e.target.files));
     this.btnLoadSample?.addEventListener('click', () => this.loadSampleMaterial());
@@ -404,12 +659,10 @@ class SyllabusApp {
       if (e.dataTransfer?.files?.length) this.uploadFiles(e.dataTransfer.files);
     });
 
-    // Flashcards
     this.btnGenerateCards?.addEventListener('click', () => this.generateFlashcards());
     this.btnGenerateCheatsheet?.addEventListener('click', () => this.generateCheatsheet());
     this.btnDownloadCheatsheet?.addEventListener('click', () => this.downloadCheatsheet());
 
-    // Settings
     this.btnOpenSettings?.addEventListener('click', () => this.settingsModal.style.display = 'flex');
     this.btnCloseSettings?.addEventListener('click', () => this.settingsModal.style.display = 'none');
     this.settingsModal?.addEventListener('click', (e) => {
@@ -476,7 +729,7 @@ class SyllabusApp {
     });
   }
 
-  /* --- CHAT STREAMING & QUICK ACTION PILLS --- */
+  /* --- CHAT STREAMING --- */
   renderActiveSessionMessages() {
     const activeSess = this.getActiveSession();
     if (!activeSess || activeSess.messages.length === 0) {
@@ -579,7 +832,6 @@ class SyllabusApp {
 
       contentEl.innerHTML = this.renderMarkdown(fullAgentText);
       
-      // Render Citations with Click-to-Inspect
       if (collectedCitations.length > 0) {
         citationsContainer.style.display = 'block';
         citationsContainer.innerHTML = `
@@ -591,7 +843,6 @@ class SyllabusApp {
           `).join('')}
         `;
 
-        // Attach click listener to open Citation Inspector in Canvas Studio
         citationsContainer.querySelectorAll('.citation-badge').forEach((badge, idx) => {
           badge.addEventListener('click', () => {
             const cit = collectedCitations[idx];
@@ -600,7 +851,6 @@ class SyllabusApp {
         });
       }
 
-      // Attach Quick Action Pills
       if (quickActionsContainer) {
         quickActionsContainer.style.display = 'flex';
         this.attachQuickActionListeners(quickActionsContainer, fullAgentText, collectedCitations);
@@ -691,7 +941,6 @@ class SyllabusApp {
           this.switchTab('tab-flashcards');
           this.generateFlashcards();
         } else if (action === 'canvas') {
-          // Check if code block exists in message
           const codeMatch = agentText.match(/```([a-zA-Z]*)\n([\s\S]*?)```/);
           if (codeMatch) {
             this.canvas.openCode('Algorithm & Code Studio', codeMatch[2], codeMatch[1] || 'python');

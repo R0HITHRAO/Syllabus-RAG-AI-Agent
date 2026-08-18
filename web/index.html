@@ -33,7 +33,7 @@
           </div>
           <div class="brand-text">
             <h1 class="brand-title">Syllabus<span class="gradient-text">AI</span></h1>
-            <span class="brand-badge">Agent 2.1</span>
+            <span class="brand-badge">Agent 2.2</span>
           </div>
         </div>
       </div>
@@ -115,6 +115,10 @@
           <button class="tab-btn active" data-tab="tab-chat">
             <span class="tab-icon">💬</span> AI Agent Chat
           </button>
+          <button class="tab-btn" data-tab="tab-podcast">
+            <span class="tab-icon">🎙️</span> Audio Deep Dive
+            <span class="badge-pill">New</span>
+          </button>
           <button class="tab-btn" data-tab="tab-exam">
             <span class="tab-icon">📝</span> Exam Arena
           </button>
@@ -180,7 +184,95 @@
           </div>
         </section>
 
-        <!-- Tab 2: Exam Arena -->
+        <!-- Tab 2: 🎙️ Audio Deep Dive (NotebookLM Style) -->
+        <section id="tab-podcast" class="tab-pane">
+          <div class="podcast-layout">
+            
+            <!-- Podcast Generator Header -->
+            <div class="glass-card podcast-control-card">
+              <div class="podcast-header-left">
+                <div class="podcast-badge">🎙️ NotebookLM-Style Audio Deep Dive</div>
+                <h3 class="card-title">2-Host Interactive Study Podcast</h3>
+                <p class="card-subtitle">Synthesizes a conversational audio dialogue between Alex & Taylor breaking down your course concepts.</p>
+              </div>
+              <div class="podcast-header-actions">
+                <input type="text" id="podcast-topic-input" class="styled-input" placeholder="Topic to discuss..." value="Operating Systems & Memory Management" style="width: 280px;">
+                <button id="btn-generate-podcast" class="primary-btn glow-btn">
+                  <span>⚡ Generate Audio Deep Dive</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Podcast Studio Player -->
+            <div id="podcast-player-card" class="glass-card podcast-player-card" style="display: none;">
+              
+              <!-- Episode Info -->
+              <div class="podcast-meta-row">
+                <div>
+                  <h4 id="podcast-title-display" class="podcast-episode-title">Deep Dive: Operating Systems</h4>
+                  <p id="podcast-summary-display" class="podcast-episode-summary">A 2-host conversational masterclass.</p>
+                </div>
+                <div class="speed-selector-wrapper">
+                  <label for="podcast-speed-select">Speed:</label>
+                  <select id="podcast-speed-select" class="styled-select">
+                    <option value="1">1.0x</option>
+                    <option value="1.25" selected>1.25x</option>
+                    <option value="1.5">1.5x</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Host Visualizers -->
+              <div class="hosts-visualizer-row">
+                <div id="host-card-alex" class="host-avatar-card">
+                  <div class="host-avatar-ring">
+                    <div class="host-avatar">🎙️</div>
+                  </div>
+                  <div class="host-name">Alex</div>
+                  <div class="host-role">Concept Explorer</div>
+                </div>
+
+                <!-- Animated Waveform Canvas -->
+                <div class="waveform-container">
+                  <canvas id="audio-waveform-canvas" width="340" height="70"></canvas>
+                </div>
+
+                <div id="host-card-taylor" class="host-avatar-card">
+                  <div class="host-avatar-ring">
+                    <div class="host-avatar">🎧</div>
+                  </div>
+                  <div class="host-name">Taylor</div>
+                  <div class="host-role">Engineering Specialist</div>
+                </div>
+              </div>
+
+              <!-- Player Action Controls -->
+              <div class="player-controls-row">
+                <button id="btn-rewind-podcast" class="icon-btn" title="Rewind 10s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
+                </button>
+                <button id="btn-play-podcast" class="play-btn glow-btn" title="Play / Pause">
+                  <span id="play-btn-icon">▶</span>
+                </button>
+                <button id="btn-forward-podcast" class="icon-btn" title="Skip 10s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
+                </button>
+              </div>
+
+              <!-- Synchronized Transcript -->
+              <div class="transcript-box">
+                <div class="transcript-header">📜 Synchronized Live Transcript</div>
+                <div id="transcript-lines-container" class="transcript-lines">
+                  <!-- Synced transcript turns dynamically injected -->
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Tab 3: Exam Arena -->
         <section id="tab-exam" class="tab-pane">
           <div class="arena-layout">
             <div class="arena-sidebar">
@@ -254,7 +346,7 @@
           </div>
         </section>
 
-        <!-- Tab 3: Document Hub -->
+        <!-- Tab 4: Document Hub -->
         <section id="tab-docs" class="tab-pane">
           <div class="docs-layout">
             <div class="glass-card upload-card">
@@ -289,7 +381,7 @@
           </div>
         </section>
 
-        <!-- Tab 4: Revision & Flashcards -->
+        <!-- Tab 5: Revision & Flashcards -->
         <section id="tab-flashcards" class="tab-pane">
           <div class="flashcards-layout">
             <div class="flashcards-toolbar">
@@ -380,18 +472,14 @@
               </div>
               <div class="inspector-snippet-box">
                 <div class="snippet-header">Verified Source Excerpt:</div>
-                <div id="inspector-highlighted-text" class="highlighted-text">
-                  <!-- Highlighted excerpt rendered here -->
-                </div>
+                <div id="inspector-highlighted-text" class="highlighted-text"></div>
               </div>
             </div>
           </div>
 
           <!-- Pane 3: Notes & Math Proofs -->
           <div id="studio-pane-notes" class="studio-pane">
-            <div id="canvas-notes-content" class="notes-content">
-              <!-- Formatted math and notes -->
-            </div>
+            <div id="canvas-notes-content" class="notes-content"></div>
           </div>
 
         </div>

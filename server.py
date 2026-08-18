@@ -26,11 +26,12 @@ from core.vector_store import AcademicVectorStore
 from core.agent_engine import AIAgentEngine
 from core.quiz_generator import QuizGenerator
 from core.syllabus_analyzer import SyllabusAnalyzer
+from core.audio_podcast import AudioPodcastGenerator
 
 app = FastAPI(
     title="SyllabusRAG & ChatGPT AI Agent Platform",
     description="ChatGPT-Style Autonomous AI Agent & Grounded Exam Preparation Platform",
-    version="2.1.0"
+    version="2.2.0"
 )
 
 # Enable CORS
@@ -54,6 +55,7 @@ vector_store = AcademicVectorStore()
 agent_engine = AIAgentEngine(vector_store)
 quiz_gen = QuizGenerator(vector_store)
 analyzer = SyllabusAnalyzer(vector_store)
+podcast_gen = AudioPodcastGenerator(vector_store)
 
 # Preload sample data if empty
 sample_file = SAMPLE_DATA_DIR / "operating_systems_sample.txt"
@@ -68,8 +70,8 @@ if len(vector_store.chunks) == 0 and sample_file.exists():
 # ---------------------------------------------------------
 class ChatRequest(BaseModel):
     query: str
-    mode: str = "agent" # "agent" (ChatGPT-Style) or "strict" (Syllabus-Only)
-    persona: str = "general" # "general", "professor", "socratic", "coding_mentor"
+    mode: str = "agent"
+    persona: str = "general"
     top_k: int = DEFAULT_TOP_K
     filter_source: Optional[str] = None
     chat_history: Optional[List[Dict[str, str]]] = None
@@ -97,6 +99,10 @@ class FlashcardRequest(BaseModel):
     filter_source: Optional[str] = None
 
 class CheatSheetRequest(BaseModel):
+    filter_source: Optional[str] = None
+
+class PodcastRequest(BaseModel):
+    topic: str = "Operating Systems & Memory Management"
     filter_source: Optional[str] = None
 
 class ApiKeyRequest(BaseModel):
@@ -136,6 +142,7 @@ async def update_api_key(req: ApiKeyRequest):
         agent_engine.model_name = req.model_name
         quiz_gen.model_name = req.model_name
         analyzer.model_name = req.model_name
+        podcast_gen.model_name = req.model_name
     return {"message": "API key and model updated successfully", "model": agent_engine.model_name}
 
 @app.post("/api/upload")
@@ -207,7 +214,6 @@ async def chat_with_agent(req: ChatRequest):
 
 @app.post("/api/chat/stream")
 async def chat_stream_with_agent(req: ChatRequest):
-    """Server-Sent Events (SSE) word-by-word streaming endpoint."""
     filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
     return StreamingResponse(
         agent_engine.query_stream(
@@ -220,6 +226,13 @@ async def chat_stream_with_agent(req: ChatRequest):
         ),
         media_type="text/event-stream"
     )
+
+@app.post("/api/podcast/generate")
+async def generate_podcast(req: PodcastRequest):
+    """Generate 2-host audio podcast dialogue script (NotebookLM style)."""
+    filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+    data = podcast_gen.generate_podcast_script(topic=req.topic, filter_source=filter_val)
+    return data
 
 @app.post("/api/quiz/generate")
 async def generate_quiz(req: QuizGenerateRequest):
@@ -246,7 +259,6 @@ async def submit_quiz(req: QuizSubmitRequest):
 
 @app.post("/api/quiz/export")
 async def export_quiz_worksheet(req: QuizExportRequest):
-    """Generate printable markdown/plain text exam worksheet with answer key."""
     lines = [
         f"# 📝 Examination Worksheet: {req.topic}",
         f"**Date**: __________________ | **Student Name**: ___________________________",

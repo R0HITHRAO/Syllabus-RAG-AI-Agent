@@ -684,7 +684,6 @@ body {
   50% { opacity: 0; }
 }
 
-/* Citations Box */
 .citations-box {
   margin-top: 14px;
   padding-top: 12px;
@@ -717,7 +716,6 @@ body {
   transform: translateY(-1px);
 }
 
-/* Floating Quick Actions Bar */
 .quick-actions-bar {
   display: flex;
   flex-wrap: wrap;
@@ -749,7 +747,6 @@ body {
   transform: translateY(-1px);
 }
 
-/* Chat Input Bar */
 .chat-input-container {
   padding: 16px 24px;
   background: var(--bg-glass);
@@ -853,7 +850,235 @@ body {
   border-radius: 3px;
 }
 
-/* --- 6. RIGHT SPLIT-SCREEN CANVAS STUDIO --- */
+/* --- 6. 🎙️ AUDIO DEEP DIVE PODCAST STUDIO --- */
+.podcast-layout {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.podcast-control-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.podcast-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.podcast-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.podcast-player-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px;
+}
+
+.podcast-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.podcast-episode-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.podcast-episode-summary {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.speed-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.hosts-visualizer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 10px;
+}
+
+.host-avatar-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 130px;
+  text-align: center;
+}
+
+.host-avatar-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  background: var(--bg-tertiary);
+}
+
+.host-avatar {
+  font-size: 32px;
+}
+
+.host-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.host-role {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Active Speaker Glow Ring */
+.host-avatar-card.speaking #host-card-alex .host-avatar-ring,
+#host-card-alex.speaking .host-avatar-ring {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.75);
+  transform: scale(1.08);
+}
+
+#host-card-taylor.speaking .host-avatar-ring {
+  border-color: #06b6d4;
+  box-shadow: 0 0 24px rgba(6, 182, 212, 0.75);
+  transform: scale(1.08);
+}
+
+.waveform-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+#audio-waveform-canvas {
+  width: 100%;
+  max-width: 380px;
+  height: 70px;
+}
+
+.player-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.play-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--gradient-accent);
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--glow-shadow);
+  transition: all 0.2s;
+}
+
+.play-btn:hover {
+  transform: scale(1.08);
+}
+
+.transcript-box {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.transcript-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.transcript-lines {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 6px;
+}
+
+.transcript-turn {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid transparent;
+  transition: all 0.25s;
+}
+
+.transcript-turn.active-speaking {
+  border-color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.15);
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+  transform: translateX(4px);
+}
+
+.speaker-badge {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 65px;
+}
+
+.speaker-alex {
+  color: #a78bfa;
+}
+
+.speaker-taylor {
+  color: #38bdf8;
+}
+
+.spoken-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+/* --- 7. RIGHT CANVAS STUDIO --- */
 .canvas-studio {
   width: 480px;
   background: var(--canvas-bg);
@@ -944,7 +1169,6 @@ body {
   display: flex;
 }
 
-/* Code Studio Pane */
 .code-studio-toolbar {
   display: flex;
   align-items: center;
@@ -1026,7 +1250,6 @@ body {
   overflow-y: auto;
 }
 
-/* Document Inspector Pane */
 .inspector-card {
   background: var(--bg-glass-card);
   border: 1px solid var(--border-color);
@@ -1081,10 +1304,6 @@ body {
   border-radius: 3px;
 }
 
-.inspector-snippet-box {
-  margin-top: 10px;
-}
-
 .snippet-header {
   font-size: 12px;
   font-weight: 700;
@@ -1103,14 +1322,13 @@ body {
   box-shadow: 0 0 16px var(--highlight-bg);
 }
 
-/* Notes & Math Studio */
 .notes-content {
   font-size: 14px;
   line-height: 1.65;
   color: var(--text-primary);
 }
 
-/* --- 7. EXAM ARENA TAB --- */
+/* --- 8. EXAM ARENA TAB --- */
 .arena-layout {
   display: flex;
   flex: 1;
@@ -1289,7 +1507,7 @@ body {
   margin: 10px 0;
 }
 
-/* --- 8. REVISION & FLASHCARDS TAB --- */
+/* --- 9. REVISION & FLASHCARDS TAB --- */
 .flashcards-layout {
   padding: 24px;
   max-width: 1000px;
@@ -1376,7 +1594,7 @@ body {
   cursor: pointer;
 }
 
-/* --- 9. DOCUMENT HUB --- */
+/* --- 10. DOCUMENT HUB --- */
 .docs-layout {
   padding: 24px;
   max-width: 1100px;
@@ -1468,7 +1686,7 @@ body {
   margin-bottom: 8px;
 }
 
-/* --- 10. PRINT STYLESHEET (@media print) --- */
+/* --- 11. PRINT STYLESHEET (@media print) --- */
 @media print {
   body {
     background: #ffffff !important;
