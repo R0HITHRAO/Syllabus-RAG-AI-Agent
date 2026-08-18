@@ -73,6 +73,11 @@
           </select>
         </div>
 
+        <!-- Toggle Canvas Studio Button -->
+        <button id="btn-toggle-canvas" class="icon-btn" title="Toggle Canvas Studio">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+        </button>
+
         <!-- Settings Button -->
         <button id="btn-open-settings" class="icon-btn settings-btn" title="API Settings & Config">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -80,10 +85,10 @@
       </div>
     </header>
 
-    <!-- Main Workspace with Collapsible Sidebar -->
+    <!-- Main 3-Column Workspace Layout -->
     <div class="workspace-layout">
       
-      <!-- Collapsible Chat Sessions Sidebar -->
+      <!-- 1. Collapsible Chat Sessions Sidebar (Left) -->
       <aside id="chat-sidebar" class="chat-sidebar">
         <div class="sidebar-header">
           <button id="btn-new-chat" class="new-chat-btn">
@@ -102,7 +107,7 @@
         </div>
       </aside>
 
-      <!-- Center Main Content -->
+      <!-- 2. Center Main Content (Chat & Tabs) -->
       <main class="main-content">
         
         <!-- Navigation Tab Buttons -->
@@ -316,6 +321,82 @@
         </section>
 
       </main>
+
+      <!-- 3. Split-Screen Studio & Citation Inspector Canvas (Right) -->
+      <aside id="canvas-studio" class="canvas-studio collapsed">
+        <div class="canvas-header">
+          <div class="canvas-title-group">
+            <span class="canvas-icon">🎨</span>
+            <div class="canvas-title" id="canvas-title">Interactive Studio</div>
+          </div>
+          <div class="canvas-actions">
+            <button id="btn-copy-canvas" class="icon-btn-sm" title="Copy Content">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+            <button id="btn-close-canvas" class="icon-btn-sm" title="Close Studio">&times;</button>
+          </div>
+        </div>
+
+        <!-- Studio Mode Tabs -->
+        <div class="canvas-tabs">
+          <button class="canvas-tab active" data-studio="code">💻 Code Studio</button>
+          <button class="canvas-tab" data-studio="inspector">🔍 Source Inspector</button>
+          <button class="canvas-tab" data-studio="notes">📝 Notes & Proofs</button>
+        </div>
+
+        <!-- Studio Content Panes -->
+        <div class="canvas-body">
+          
+          <!-- Pane 1: Code Studio & Execution Console -->
+          <div id="studio-pane-code" class="studio-pane active">
+            <div class="code-studio-toolbar">
+              <span id="code-lang-tag" class="lang-tag">python</span>
+              <button id="btn-run-code" class="run-code-btn">▶ Run Code</button>
+            </div>
+            <div class="editor-wrapper">
+              <textarea id="canvas-code-editor" spellcheck="false"></textarea>
+            </div>
+            <div class="console-box">
+              <div class="console-header">Console Output</div>
+              <pre id="console-output" class="console-output">Click "▶ Run Code" to execute simulation...</pre>
+            </div>
+          </div>
+
+          <!-- Pane 2: Document Source & Citation Inspector -->
+          <div id="studio-pane-inspector" class="studio-pane">
+            <div class="inspector-card">
+              <div class="inspector-meta-row">
+                <span id="inspector-doc-name" class="inspector-doc-pill">📄 operating_systems_sample.txt</span>
+                <span id="inspector-page-num" class="inspector-page-pill">Page 1</span>
+              </div>
+              <div class="similarity-meter-wrapper">
+                <div class="meter-label">
+                  <span>Relevance Match:</span>
+                  <strong id="inspector-sim-score">96%</strong>
+                </div>
+                <div class="meter-bar-track">
+                  <div id="inspector-meter-fill" class="meter-bar-fill" style="width: 96%;"></div>
+                </div>
+              </div>
+              <div class="inspector-snippet-box">
+                <div class="snippet-header">Verified Source Excerpt:</div>
+                <div id="inspector-highlighted-text" class="highlighted-text">
+                  <!-- Highlighted excerpt rendered here -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane 3: Notes & Math Proofs -->
+          <div id="studio-pane-notes" class="studio-pane">
+            <div id="canvas-notes-content" class="notes-content">
+              <!-- Formatted math and notes -->
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
     </div>
 
     <!-- Settings Modal -->
