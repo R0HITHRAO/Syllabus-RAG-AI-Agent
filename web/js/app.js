@@ -1,7 +1,7 @@
 /**
- * SyllabusAI — Complete Frontend Application & Controller Suite
- * Includes: Multi-Session Manager, SSE Streaming, Canvas Studio,
- *           Citation Inspector, Audio Deep Dive Podcast Synthesizer
+ * SyllabusAI — Complete Frontend Application & Controller Suite (v2.3.0)
+ * Modernized with Dynamic Neon Equalizer Spectrum, Segmented Controls,
+ * Multi-Session Management, SSE Real-Time Streaming & Canvas Studio.
  */
 
 class AudioPodcastController {
@@ -95,7 +95,7 @@ class AudioPodcastController {
     this.renderTranscript(podcastData.dialogue);
     this.drawIdleWaveform();
     
-    // Auto-start playback on generation
+    // Start auto-playback
     this.playTurn(0);
   }
 
@@ -150,11 +150,11 @@ class AudioPodcastController {
     this.isPlaying = true;
     if (this.playIcon) this.playIcon.innerText = '⏸';
 
-    // Highlight Active Speaker Card
+    // Highlight Active Speaker
     this.hostCardAlex?.classList.toggle('speaking', isAlex);
     this.hostCardTaylor?.classList.toggle('speaking', !isAlex);
 
-    // Highlight Transcript Line & Scroll
+    // Highlight Synced Transcript
     document.querySelectorAll('.transcript-turn').forEach((el, idx) => {
       el.classList.toggle('active-speaking', idx === index);
     });
@@ -189,7 +189,6 @@ class AudioPodcastController {
 
       this.speechUtterance.onerror = (err) => {
         console.warn('SpeechSynthesis error:', err);
-        // Fallback simulation timer if browser audio is blocked
         setTimeout(() => {
           if (this.isPlaying) this.playTurn(index + 1);
         }, (turn.text.split(' ').length / (2.5 * this.playbackRate)) * 1000);
@@ -225,7 +224,7 @@ class AudioPodcastController {
     this.playTurn(nextIndex);
   }
 
-  /* --- ANIMATED AUDIO WAVEFORM --- */
+  /* --- DYNAMIC NEON EQUALIZER SPECTRUM --- */
   startWaveformAnimation() {
     this.stopWaveformAnimation();
     const render = (time) => {
@@ -252,20 +251,22 @@ class AudioPodcastController {
 
     ctx.clearRect(0, 0, width, height);
 
-    const barCount = 32;
+    const barCount = 36;
     const barWidth = 6;
     const gap = (width - barCount * barWidth) / (barCount - 1);
 
     const gradient = ctx.createLinearGradient(0, 0, width, 0);
-    gradient.addColorStop(0, '#8b5cf6');
-    gradient.addColorStop(0.5, '#06b6d4');
+    gradient.addColorStop(0, '#6366f1');
+    gradient.addColorStop(0.35, '#8b5cf6');
+    gradient.addColorStop(0.7, '#06b6d4');
     gradient.addColorStop(1, '#38bdf8');
     ctx.fillStyle = gradient;
 
     for (let i = 0; i < barCount; i++) {
-      const frequency = (i / barCount) * Math.PI * 4;
-      const noise = Math.sin(time * 0.006 + frequency) * 0.5 + 0.5;
-      const waveHeight = Math.max(8, noise * (height - 10));
+      const freq1 = (i / barCount) * Math.PI * 3;
+      const freq2 = (i / barCount) * Math.PI * 6;
+      const wave = Math.sin(time * 0.007 + freq1) * 0.4 + Math.cos(time * 0.009 + freq2) * 0.3 + 0.5;
+      const waveHeight = Math.max(8, wave * (height - 8));
       const x = i * (barWidth + gap);
       const y = (height - waveHeight) / 2;
 
@@ -284,7 +285,7 @@ class AudioPodcastController {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
 
-    const barCount = 32;
+    const barCount = 36;
     const barWidth = 6;
     const gap = (width - barCount * barWidth) / (barCount - 1);
 
@@ -303,7 +304,7 @@ class CanvasStudio {
     this.app = app;
     this.panel = document.getElementById('canvas-studio');
     this.titleEl = document.getElementById('canvas-title');
-    this.tabs = document.querySelectorAll('.canvas-tab');
+    this.tabs = document.querySelectorAll('.canvas-tab-btn, .canvas-tab');
     this.panes = document.querySelectorAll('.studio-pane');
 
     this.codeEditor = document.getElementById('canvas-code-editor');
@@ -433,7 +434,7 @@ class CanvasStudio {
 
   copyActiveContent() {
     let content = '';
-    const activeTab = document.querySelector('.canvas-tab.active')?.dataset.studio;
+    const activeTab = document.querySelector('.canvas-tab-btn.active, .canvas-tab.active')?.dataset.studio;
     if (activeTab === 'code') content = this.codeEditor?.value || '';
     else if (activeTab === 'inspector') content = this.inspectorHighlightedText?.innerText || '';
     else content = this.notesContent?.innerText || '';
@@ -484,7 +485,7 @@ class SyllabusApp {
     this.btnNewChat = document.getElementById('btn-new-chat');
     this.btnToggleCanvas = document.getElementById('btn-toggle-canvas');
 
-    this.tabButtons = document.querySelectorAll('.tab-btn');
+    this.tabButtons = document.querySelectorAll('.tab-nav-btn, .tab-btn');
     this.tabPanes = document.querySelectorAll('.tab-pane');
 
     this.chatMessages = document.getElementById('chat-messages');
@@ -653,8 +654,9 @@ class SyllabusApp {
     });
 
     document.addEventListener('click', (e) => {
-      if (e.target.classList.contains('prompt-chip')) {
-        const query = e.target.dataset.query;
+      const chip = e.target.closest('.prompt-chip');
+      if (chip) {
+        const query = chip.dataset.query;
         if (query && this.chatInput) {
           this.chatInput.value = query;
           this.handleSendMessage();
@@ -761,16 +763,43 @@ class SyllabusApp {
     if (!activeSess || activeSess.messages.length === 0) {
       this.chatMessages.innerHTML = `
         <div class="welcome-hero-card">
-          <div class="hero-sparkle-badge">🤖 ChatGPT-Style Intelligence + Syllabus Grounding</div>
-          <h2 class="hero-title">Welcome to <span class="gradient-text">SyllabusAI</span></h2>
+          <div class="hero-sparkle-pill">
+            <span class="sparkle-star">✨</span>
+            <span>Autonomous AI Agent + Grounded Syllabus Intelligence</span>
+          </div>
+          <h2 class="hero-title">Master Your Course with <span class="gradient-text">SyllabusAI</span></h2>
           <p class="hero-subtitle">
-            Ask general questions freely, write code, derive mathematical formulas, or explore your uploaded course materials with exact textbook citations.
+            Ask anything freely, write high-performance code, derive mathematical equations, or explore verified course notes with exact textbook citations.
           </p>
-          <div class="hero-prompts">
-            <button class="prompt-chip" data-query="How are you doing today?">👋 Say Hello</button>
-            <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its complexity.">💻 Linked List in Python</button>
-            <button class="prompt-chip" data-query="What is the Effective Memory Access Time (EMAT) formula from my notes?">📚 EMAT Formula</button>
-            <button class="prompt-chip" data-query="What are the 4 Coffman conditions for deadlocks?">🔒 Deadlock Conditions</button>
+          <div class="hero-prompts-grid">
+            <button class="prompt-chip" data-query="Explain how Dijkstra's Banker's Algorithm prevents deadlocks and find safe sequences.">
+              <span class="chip-emoji">🔒</span>
+              <div class="chip-text">
+                <strong>Banker's Algorithm</strong>
+                <small>Deadlock prevention & safe states</small>
+              </div>
+            </button>
+            <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its complexity.">
+              <span class="chip-emoji">💻</span>
+              <div class="chip-text">
+                <strong>Reverse Linked List</strong>
+                <small>Python 3-pointer implementation</small>
+              </div>
+            </button>
+            <button class="prompt-chip" data-query="What is the Effective Memory Access Time (EMAT) formula from my notes?">
+              <span class="chip-emoji">📐</span>
+              <div class="chip-text">
+                <strong>EMAT Formula</strong>
+                <small>TLB hit ratio & memory access time</small>
+              </div>
+            </button>
+            <button class="prompt-chip" data-query="What is Belady's Anomaly in FIFO page replacement and how does LRU fix it?">
+              <span class="chip-emoji">⚡</span>
+              <div class="chip-text">
+                <strong>Belady's Anomaly</strong>
+                <small>FIFO vs LRU page replacement</small>
+              </div>
+            </button>
           </div>
         </div>
       `;
@@ -1037,7 +1066,7 @@ class SyllabusApp {
     const diff = document.getElementById('quiz-difficulty')?.value || 'Medium';
     const qType = document.getElementById('quiz-type')?.value || 'MCQ';
 
-    this.quizContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><h3>Generating Assessment Questions...</h3></div>';
+    this.quizContainer.innerHTML = '<div class="empty-state-card"><div class="empty-icon-glow">⏳</div><h3>Generating Assessment Questions...</h3></div>';
     this.quizResults.style.display = 'none';
     this.quizFooter.style.display = 'none';
     this.btnExportWorksheet.style.display = 'none';
@@ -1052,13 +1081,13 @@ class SyllabusApp {
       this.activeQuiz = data.quiz;
       this.renderQuiz(data.quiz, qType);
     } catch {
-      this.quizContainer.innerHTML = '<div class="empty-state"><p style="color:#ef4444;">Failed to generate quiz.</p></div>';
+      this.quizContainer.innerHTML = '<div class="empty-state-card"><p style="color:#ef4444;">Failed to generate quiz.</p></div>';
     }
   }
 
   renderQuiz(questions, qType) {
     if (!questions || questions.length === 0) {
-      this.quizContainer.innerHTML = '<div class="empty-state"><p>No questions generated.</p></div>';
+      this.quizContainer.innerHTML = '<div class="empty-state-card"><p>No questions generated.</p></div>';
       return;
     }
 
@@ -1083,7 +1112,7 @@ class SyllabusApp {
       } else {
         optionsHtml = `
           <div class="descriptive-field">
-            <textarea class="styled-input" rows="3" placeholder="Write your derivation or answer here..." style="width:100%;"></textarea>
+            <textarea class="modern-input" rows="3" placeholder="Write your derivation or answer here..." style="width:100%;"></textarea>
           </div>
         `;
       }
@@ -1171,7 +1200,7 @@ class SyllabusApp {
   /* --- FLASHCARDS --- */
   async generateFlashcards() {
     const topic = document.getElementById('flashcard-topic')?.value || 'Core Concepts';
-    this.flashcardsContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><h3>Building 3D Flashcard Deck...</h3></div>';
+    this.flashcardsContainer.innerHTML = '<div class="empty-state-card"><div class="empty-icon-glow">⏳</div><h3>Building 3D Flashcard Deck...</h3></div>';
 
     try {
       const res = await fetch('/api/flashcards', {
@@ -1182,7 +1211,7 @@ class SyllabusApp {
       const data = await res.json();
       this.renderFlashcards(data.flashcards);
     } catch {
-      this.flashcardsContainer.innerHTML = '<div class="empty-state"><p>Failed to generate cards.</p></div>';
+      this.flashcardsContainer.innerHTML = '<div class="empty-state-card"><p>Failed to generate cards.</p></div>';
     }
   }
 
@@ -1272,19 +1301,19 @@ class SyllabusApp {
   renderDocsTable(docs) {
     if (!this.docsTableContainer) return;
     if (!docs || docs.length === 0) {
-      this.docsTableContainer.innerHTML = '<div class="empty-state"><p>No documents uploaded yet.</p></div>';
+      this.docsTableContainer.innerHTML = '<div class="empty-state-card"><p>No documents uploaded yet.</p></div>';
       return;
     }
 
-    let html = '<div class="doc-items-list">';
+    let html = '<div class="doc-items-list" style="display:flex; flex-direction:column; gap:10px;">';
     docs.forEach(d => {
       html += `
-        <div class="doc-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border-color);">
+        <div class="doc-row" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:var(--bg-secondary); border-radius:12px; border:1px solid var(--border-subtle);">
           <div>
-            <strong>📄 ${this.escapeHtml(d.source)}</strong>
-            <div style="font-size:12px; color:var(--text-muted);">${d.total_pages} Pages | ${d.chunk_count} Chunks</div>
+            <strong style="color:var(--text-main); font-size:13px;">📄 ${this.escapeHtml(d.source)}</strong>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${d.total_pages} Pages | ${d.chunk_count} Chunks | ${d.total_chars} chars</div>
           </div>
-          <button class="danger-btn text-btn" onclick="app.deleteDoc('${d.source}')">Delete</button>
+          <button class="danger-glass-btn" onclick="app.deleteDoc('${d.source}')">Delete</button>
         </div>
       `;
     });

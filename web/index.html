@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SyllabusAI — ChatGPT-Style Academic Agent & Exam Prep</title>
+  <title>SyllabusAI — Autonomous Academic Agent & Grounded Exam Prep</title>
   
-  <!-- Fonts -->
+  <!-- Premium Modern Fonts (Plus Jakarta Sans & JetBrains Mono) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- KaTeX LaTeX Math Styling -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -16,24 +16,30 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="/static/css/style.css?v=2.2.1">
+  <link rel="stylesheet" href="/static/css/style.css?v=2.3.0">
 </head>
 <body>
+  <div class="ambient-glow-mesh"></div>
+
   <div class="app-container">
     
-    <!-- Top Modern Navigation Bar -->
+    <!-- 1. Elevated Floating Navigation Header -->
     <header class="app-header">
       <div class="header-left">
-        <button id="btn-toggle-sidebar" class="icon-btn" title="Toggle Sessions Sidebar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        <button id="btn-toggle-sidebar" class="icon-btn" title="Toggle Chat History Sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
+        
         <div class="brand">
-          <div class="brand-logo">
-            <span class="logo-sparkle">✨</span>
+          <div class="brand-logo-wrap">
+            <div class="brand-logo-glow"></div>
+            <div class="brand-logo">
+              <span class="logo-sparkle">✨</span>
+            </div>
           </div>
           <div class="brand-text">
             <h1 class="brand-title">Syllabus<span class="gradient-text">AI</span></h1>
-            <span class="brand-badge">Agent 2.2</span>
+            <span class="brand-badge">Agent 2.3</span>
           </div>
         </div>
       </div>
@@ -41,10 +47,10 @@
       <!-- Controls in Top Bar -->
       <div class="header-controls">
         
-        <!-- Theme Selector -->
-        <div class="control-group theme-picker-group">
-          <label for="theme-select" class="control-label">🎨 Theme:</label>
-          <select id="theme-select" class="styled-select theme-select">
+        <!-- Theme Picker -->
+        <div class="control-pill-group">
+          <span class="control-pill-icon">🎨</span>
+          <select id="theme-select" class="nav-select">
             <option value="nebula">🌌 Deep Nebula</option>
             <option value="sapphire">🌊 Ocean Sapphire</option>
             <option value="emerald">🌲 Midnight Emerald</option>
@@ -53,168 +59,238 @@
           </select>
         </div>
 
-        <!-- Mode Toggle (Agent vs Strict) -->
-        <div class="mode-toggle-wrapper">
-          <button id="mode-agent-btn" class="mode-pill active" title="Answers everything like ChatGPT + Cites Syllabus">
-            <span class="pill-icon">🤖</span> AI Agent
+        <!-- Segmented Mode Toggle (Agent vs Strict) -->
+        <div class="mode-segmented-control">
+          <button id="mode-agent-btn" class="mode-seg-btn active" title="Answers like ChatGPT + Grounded Syllabus Citations">
+            <span class="seg-icon">🤖</span> AI Agent
           </button>
-          <button id="mode-strict-btn" class="mode-pill" title="Strictly locks answers to verified syllabus">
-            <span class="pill-icon">🎓</span> Strict Exam
+          <button id="mode-strict-btn" class="mode-seg-btn" title="Strictly locks responses to syllabus text">
+            <span class="seg-icon">🎓</span> Strict Exam
           </button>
         </div>
 
         <!-- Persona Selector -->
-        <div class="control-group">
-          <select id="persona-select" class="styled-select persona-select">
-            <option value="general">🤖 ChatGPT All-Rounder</option>
-            <option value="professor">🎓 Academic Professor</option>
-            <option value="socratic">🧑‍🏫 Socratic Tutor</option>
-            <option value="coding_mentor">💻 Code & Algorithm Mentor</option>
+        <div class="control-pill-group persona-group">
+          <span class="control-pill-icon">🎭</span>
+          <select id="persona-select" class="nav-select">
+            <option value="general">ChatGPT All-Rounder</option>
+            <option value="professor">Academic Professor</option>
+            <option value="socratic">Socratic Tutor</option>
+            <option value="coding_mentor">Code Mentor</option>
           </select>
         </div>
 
         <!-- Toggle Canvas Studio Button -->
-        <button id="btn-toggle-canvas" class="icon-btn" title="Toggle Canvas Studio">
+        <button id="btn-toggle-canvas" class="icon-btn glow-hover" title="Toggle Split-Screen Canvas Studio">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
         </button>
 
         <!-- Settings Button -->
-        <button id="btn-open-settings" class="icon-btn settings-btn" title="API Settings & Config">
+        <button id="btn-open-settings" class="icon-btn settings-btn glow-hover" title="API Settings & Model Config">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </button>
       </div>
     </header>
 
-    <!-- Main 3-Column Workspace Layout -->
+    <!-- 2. Workspace Layout -->
     <div class="workspace-layout">
       
-      <!-- 1. Collapsible Chat Sessions Sidebar (Left) -->
+      <!-- 2.1 Collapsible Sessions Sidebar (Left) -->
       <aside id="chat-sidebar" class="chat-sidebar">
         <div class="sidebar-header">
-          <button id="btn-new-chat" class="new-chat-btn">
-            <span class="plus-icon">+</span> New Chat
+          <button id="btn-new-chat" class="new-chat-btn glow-btn">
+            <span class="plus-icon">+</span> New Conversation
           </button>
         </div>
-        <div class="sidebar-section-title">Saved Conversations</div>
-        <div id="sessions-list" class="sessions-list">
-          <!-- Session items dynamically injected -->
+        
+        <div class="sidebar-section-title">
+          <span>Recent Sessions</span>
+          <span class="session-badge-count">Auto-Saved</span>
         </div>
+        
+        <div id="sessions-list" class="sessions-list">
+          <!-- Dynamically populated -->
+        </div>
+
         <div class="sidebar-footer">
           <div class="system-status-indicator">
             <span id="status-dot" class="status-dot online"></span>
-            <span id="status-text" class="status-text">Engine Ready</span>
+            <div class="status-meta">
+              <span id="status-text" class="status-title">Engine Online</span>
+              <span class="status-sub">Hybrid Dense + BM25 RRF</span>
+            </div>
           </div>
         </div>
       </aside>
 
-      <!-- 2. Center Main Content (Chat & Tabs) -->
+      <!-- 2.2 Center Main Content (Tabs & Views) -->
       <main class="main-content">
         
-        <!-- Navigation Tab Buttons -->
-        <nav class="tabs-nav">
-          <button class="tab-btn active" data-tab="tab-chat">
-            <span class="tab-icon">💬</span> AI Agent Chat
-          </button>
-          <button class="tab-btn" data-tab="tab-podcast">
-            <span class="tab-icon">🎙️</span> Audio Deep Dive
-            <span class="badge-pill">New</span>
-          </button>
-          <button class="tab-btn" data-tab="tab-exam">
-            <span class="tab-icon">📝</span> Exam Arena
-          </button>
-          <button class="tab-btn" data-tab="tab-docs">
-            <span class="tab-icon">📚</span> Document Hub
-            <span id="doc-count-badge" class="badge-pill">1</span>
-          </button>
-          <button class="tab-btn" data-tab="tab-flashcards">
-            <span class="tab-icon">⚡</span> Revision & Flashcards
-          </button>
+        <!-- Apple-Style Segmented Navigation Tabs -->
+        <nav class="tabs-nav-container">
+          <div class="tabs-nav-bar">
+            <button class="tab-nav-btn active" data-tab="tab-chat">
+              <span class="tab-icon">💬</span>
+              <span class="tab-label">AI Agent Chat</span>
+            </button>
+            <button class="tab-nav-btn" data-tab="tab-podcast">
+              <span class="tab-icon">🎙️</span>
+              <span class="tab-label">Audio Deep Dive</span>
+              <span class="pulse-chip">Live</span>
+            </button>
+            <button class="tab-nav-btn" data-tab="tab-exam">
+              <span class="tab-icon">📝</span>
+              <span class="tab-label">Exam Arena</span>
+            </button>
+            <button class="tab-nav-btn" data-tab="tab-docs">
+              <span class="tab-icon">📚</span>
+              <span class="tab-label">Document Hub</span>
+              <span id="doc-count-badge" class="count-pill">1</span>
+            </button>
+            <button class="tab-nav-btn" data-tab="tab-flashcards">
+              <span class="tab-icon">⚡</span>
+              <span class="tab-label">Revision & Flashcards</span>
+            </button>
+          </div>
         </nav>
 
         <!-- Tab 1: AI Agent Chat -->
         <section id="tab-chat" class="tab-pane active">
           <div class="chat-wrapper">
             
-            <!-- Chat Messages Container -->
+            <!-- Chat Messages Scroll Container -->
             <div id="chat-messages" class="chat-messages">
               <!-- Welcome Hero Card -->
               <div class="welcome-hero-card">
-                <div class="hero-sparkle-badge">🤖 ChatGPT-Style Intelligence + Syllabus Grounding</div>
-                <h2 class="hero-title">Welcome to <span class="gradient-text">SyllabusAI</span></h2>
+                <div class="hero-sparkle-pill">
+                  <span class="sparkle-star">✨</span>
+                  <span>Autonomous AI Agent + Grounded Syllabus Intelligence</span>
+                </div>
+                
+                <h2 class="hero-title">
+                  Master Your Course with <span class="gradient-text">SyllabusAI</span>
+                </h2>
+                
                 <p class="hero-subtitle">
-                  Ask general questions freely, write code, derive mathematical formulas, or explore your uploaded course materials with exact textbook citations.
+                  Ask anything freely, write high-performance code, derive mathematical equations, or explore verified course notes with exact textbook citations.
                 </p>
-                <div class="hero-prompts">
-                  <button class="prompt-chip" data-query="How are you doing today?">👋 Say Hello</button>
-                  <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its complexity.">💻 Linked List in Python</button>
-                  <button class="prompt-chip" data-query="What is the Effective Memory Access Time (EMAT) formula from my notes?">📚 EMAT Formula</button>
-                  <button class="prompt-chip" data-query="What are the 4 Coffman conditions for deadlocks?">🔒 Deadlock Conditions</button>
+                
+                <div class="hero-prompts-grid">
+                  <button class="prompt-chip" data-query="Explain how Dijkstra's Banker's Algorithm prevents deadlocks and find safe sequences.">
+                    <span class="chip-emoji">🔒</span>
+                    <div class="chip-text">
+                      <strong>Banker's Algorithm</strong>
+                      <small>Deadlock prevention & safe states</small>
+                    </div>
+                  </button>
+
+                  <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its complexity.">
+                    <span class="chip-emoji">💻</span>
+                    <div class="chip-text">
+                      <strong>Reverse Linked List</strong>
+                      <small>Python 3-pointer implementation</small>
+                    </div>
+                  </button>
+
+                  <button class="prompt-chip" data-query="What is the Effective Memory Access Time (EMAT) formula from my notes?">
+                    <span class="chip-emoji">📐</span>
+                    <div class="chip-text">
+                      <strong>EMAT Formula</strong>
+                      <small>TLB hit ratio & memory access time</small>
+                    </div>
+                  </button>
+
+                  <button class="prompt-chip" data-query="What is Belady's Anomaly in FIFO page replacement and how does LRU fix it?">
+                    <span class="chip-emoji">⚡</span>
+                    <div class="chip-text">
+                      <strong>Belady's Anomaly</strong>
+                      <small>FIFO vs LRU page replacement</small>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
 
-            <!-- Chat Input Footer -->
-            <div class="chat-input-container">
-              <div class="chat-input-toolbar">
-                <div class="filter-doc-wrapper">
-                  <span class="filter-icon">🔍</span>
-                  <select id="chat-doc-filter" class="inline-select">
-                    <option value="All Documents">All Syllabus Documents</option>
-                  </select>
-                </div>
-                <button id="btn-clear-chat" class="text-btn" title="Clear current messages">Clear View</button>
-              </div>
-
-              <div class="input-box-wrapper">
-                <textarea id="chat-input" rows="1" placeholder="Ask anything, request code, or explore syllabus topics..." autofocus></textarea>
+            <!-- Floating Perplexity-Style Command Bar -->
+            <div class="chat-command-wrapper">
+              <div class="command-bar-card">
                 
-                <!-- Voice Input Microphone Button -->
-                <button id="btn-voice-input" class="action-btn mic-btn" title="Voice Input (Speech to Text)">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                </button>
+                <!-- Command Bar Top Tools -->
+                <div class="command-top-tools">
+                  <div class="command-source-pill">
+                    <span class="source-icon">📚</span>
+                    <select id="chat-doc-filter" class="source-select">
+                      <option value="All Documents">All Syllabus Documents</option>
+                    </select>
+                  </div>
 
-                <!-- Send Message Button -->
-                <button id="btn-send-chat" class="action-btn send-btn" title="Send Message (Enter)">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                </button>
+                  <div class="command-tools-right">
+                    <button id="btn-clear-chat" class="subtle-btn" title="Clear chat view">Clear</button>
+                  </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="command-input-row">
+                  <textarea id="chat-input" rows="1" placeholder="Ask anything, request code simulations, or explore course materials..." autofocus></textarea>
+                  
+                  <div class="command-actions">
+                    <!-- Speech-to-Text Microphone Button -->
+                    <button id="btn-voice-input" class="cmd-icon-btn mic-btn" title="Voice Input (Speech-to-Text)">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    </button>
+
+                    <!-- Radiant Send Button -->
+                    <button id="btn-send-chat" class="cmd-send-btn glow-btn" title="Send message (Enter)">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                  </div>
+                </div>
+
               </div>
-              <div class="input-hint">Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for a new line</div>
+              <div class="command-bar-hint">Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for new line</div>
             </div>
 
           </div>
         </section>
 
-        <!-- Tab 2: 🎙️ Audio Deep Dive (NotebookLM Style) -->
+        <!-- Tab 2: 🎙️ Audio Deep Dive (NotebookLM & Spotify Style) -->
         <section id="tab-podcast" class="tab-pane">
-          <div class="podcast-layout">
+          <div class="podcast-studio-layout">
             
-            <!-- Podcast Generator Header -->
-            <div class="glass-card podcast-control-card">
-              <div class="podcast-header-left">
-                <div class="podcast-badge">🎙️ NotebookLM-Style Audio Deep Dive</div>
-                <h3 class="card-title">2-Host Interactive Study Podcast</h3>
-                <p class="card-subtitle">Synthesizes a conversational audio dialogue between Alex & Taylor breaking down your course concepts.</p>
+            <!-- Podcast Generator Glass Card -->
+            <div class="glass-surface podcast-hero-card">
+              <div class="podcast-hero-left">
+                <div class="hero-chip-badge">
+                  <span class="wave-icon">🎙️</span> NotebookLM-Style Deep Dive Studio
+                </div>
+                <h3 class="studio-title">2-Host Conversational Audio Masterclass</h3>
+                <p class="studio-subtitle">Synthesizes engaging back-and-forth dialogue between Alex (Explorer) & Taylor (Engineer) breaking down your concepts with real-world analogies.</p>
               </div>
-              <div class="podcast-header-actions">
-                <input type="text" id="podcast-topic-input" class="styled-input" placeholder="Topic to discuss..." value="Operating Systems & Memory Management" style="width: 280px;">
-                <button id="btn-generate-podcast" class="primary-btn glow-btn">
-                  <span>⚡ Generate Audio Deep Dive</span>
-                </button>
+
+              <div class="podcast-hero-right">
+                <div class="podcast-input-group">
+                  <input type="text" id="podcast-topic-input" class="modern-input" placeholder="Topic to explore..." value="Operating Systems & Memory Management">
+                  <button id="btn-generate-podcast" class="primary-gradient-btn glow-btn">
+                    <span>⚡ Generate Audio Deep Dive</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Podcast Studio Player -->
-            <div id="podcast-player-card" class="glass-card podcast-player-card" style="display: none;">
+            <!-- Spotify / NotebookLM Hi-Fi Player Card -->
+            <div id="podcast-player-card" class="glass-surface podcast-player-studio" style="display: none;">
               
-              <!-- Episode Info -->
-              <div class="podcast-meta-row">
-                <div>
-                  <h4 id="podcast-title-display" class="podcast-episode-title">Deep Dive: Operating Systems</h4>
-                  <p id="podcast-summary-display" class="podcast-episode-summary">A 2-host conversational masterclass.</p>
+              <!-- Episode Header & Speed -->
+              <div class="player-top-row">
+                <div class="episode-info">
+                  <div class="now-playing-tag">NOW PLAYING</div>
+                  <h4 id="podcast-title-display" class="episode-title">Deep Dive: Operating Systems</h4>
+                  <p id="podcast-summary-display" class="episode-summary">A 2-host conversational masterclass.</p>
                 </div>
-                <div class="speed-selector-wrapper">
-                  <label for="podcast-speed-select">Speed:</label>
-                  <select id="podcast-speed-select" class="styled-select">
+
+                <div class="speed-control-pill">
+                  <span>Speed:</span>
+                  <select id="podcast-speed-select" class="speed-select">
                     <option value="1">1.0x</option>
                     <option value="1.25" selected>1.25x</option>
                     <option value="1.5">1.5x</option>
@@ -222,48 +298,58 @@
                 </div>
               </div>
 
-              <!-- Host Visualizers -->
-              <div class="hosts-visualizer-row">
-                <div id="host-card-alex" class="host-avatar-card">
-                  <div class="host-avatar-ring">
+              <!-- Host Visualizers & Equalizer Spectrum -->
+              <div class="audio-stage-visualizer">
+                
+                <!-- Host 1: Alex -->
+                <div id="host-card-alex" class="host-stage-card">
+                  <div class="host-ring-wrap">
+                    <div class="host-ring-aura"></div>
                     <div class="host-avatar">🎙️</div>
                   </div>
                   <div class="host-name">Alex</div>
-                  <div class="host-role">Concept Explorer</div>
+                  <div class="host-badge">Concept Explorer</div>
                 </div>
 
-                <!-- Animated Waveform Canvas -->
-                <div class="waveform-container">
-                  <canvas id="audio-waveform-canvas" width="340" height="70"></canvas>
+                <!-- Animated Spectrum Canvas -->
+                <div class="spectrum-container">
+                  <canvas id="audio-waveform-canvas" width="380" height="74"></canvas>
                 </div>
 
-                <div id="host-card-taylor" class="host-avatar-card">
-                  <div class="host-avatar-ring">
+                <!-- Host 2: Taylor -->
+                <div id="host-card-taylor" class="host-stage-card">
+                  <div class="host-ring-wrap">
+                    <div class="host-ring-aura"></div>
                     <div class="host-avatar">🎧</div>
                   </div>
                   <div class="host-name">Taylor</div>
-                  <div class="host-role">Engineering Specialist</div>
+                  <div class="host-badge">Engineering Lead</div>
                 </div>
               </div>
 
-              <!-- Player Action Controls -->
-              <div class="player-controls-row">
-                <button id="btn-rewind-podcast" class="icon-btn" title="Rewind 10s">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
+              <!-- Player Playback Controls -->
+              <div class="player-controls-deck">
+                <button id="btn-rewind-podcast" class="control-circle-btn" title="Rewind 10s">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
                 </button>
-                <button id="btn-play-podcast" class="play-btn glow-btn" title="Play / Pause">
+
+                <button id="btn-play-podcast" class="main-play-btn glow-btn" title="Play / Pause">
                   <span id="play-btn-icon">▶</span>
                 </button>
-                <button id="btn-forward-podcast" class="icon-btn" title="Skip 10s">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
+
+                <button id="btn-forward-podcast" class="control-circle-btn" title="Skip 10s">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
                 </button>
               </div>
 
-              <!-- Synchronized Transcript -->
-              <div class="transcript-box">
-                <div class="transcript-header">📜 Synchronized Live Transcript</div>
-                <div id="transcript-lines-container" class="transcript-lines">
-                  <!-- Synced transcript turns dynamically injected -->
+              <!-- Live Auto-Scrolling Transcript Deck -->
+              <div class="transcript-deck">
+                <div class="transcript-deck-header">
+                  <span>📜 Synchronized Live Transcript</span>
+                  <span class="transcript-live-pill">Auto-Synced</span>
+                </div>
+                <div id="transcript-lines-container" class="transcript-scroll-area">
+                  <!-- Synced turns -->
                 </div>
               </div>
 
@@ -274,28 +360,31 @@
 
         <!-- Tab 3: Exam Arena -->
         <section id="tab-exam" class="tab-pane">
-          <div class="arena-layout">
-            <div class="arena-sidebar">
-              <div class="glass-card arena-config-card">
-                <h3 class="card-title">🎯 Exam Generator</h3>
+          <div class="arena-layout-grid">
+            
+            <!-- Exam Config Card -->
+            <div class="arena-sidebar-pane">
+              <div class="glass-surface config-card">
+                <div class="pane-title">🎯 Exam Generator</div>
                 
-                <div class="form-group">
+                <div class="form-field">
                   <label for="quiz-topic">Target Topic:</label>
-                  <input type="text" id="quiz-topic" class="styled-input" placeholder="e.g. Memory Management, Deadlocks" value="General Operating Systems">
+                  <input type="text" id="quiz-topic" class="modern-input" placeholder="e.g. Memory Management, Deadlocks" value="General Operating Systems">
                 </div>
 
-                <div class="form-row">
-                  <div class="form-group">
+                <div class="form-grid-2">
+                  <div class="form-field">
                     <label for="quiz-count">Questions:</label>
-                    <select id="quiz-count" class="styled-select">
+                    <select id="quiz-count" class="modern-select">
                       <option value="3">3 Questions</option>
                       <option value="5" selected>5 Questions</option>
                       <option value="8">8 Questions</option>
                     </select>
                   </div>
-                  <div class="form-group">
+
+                  <div class="form-field">
                     <label for="quiz-difficulty">Difficulty:</label>
-                    <select id="quiz-difficulty" class="styled-select">
+                    <select id="quiz-difficulty" class="modern-select">
                       <option value="Easy">Easy</option>
                       <option value="Medium" selected>Medium</option>
                       <option value="Hard">Hard (Gate/Univ)</option>
@@ -303,125 +392,132 @@
                   </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-field">
                   <label for="quiz-type">Question Format:</label>
-                  <select id="quiz-type" class="styled-select">
+                  <select id="quiz-type" class="modern-select">
                     <option value="MCQ" selected>Multiple Choice (MCQ)</option>
                     <option value="DESCRIPTIVE">Descriptive & Proofs</option>
                   </select>
                 </div>
 
-                <button id="btn-generate-quiz" class="primary-btn glow-btn">
+                <button id="btn-generate-quiz" class="primary-gradient-btn glow-btn">
                   <span>⚡ Generate Assessment</span>
                 </button>
               </div>
             </div>
 
-            <!-- Exam Display Panel -->
-            <div class="arena-main">
-              <div class="exam-header-bar">
-                <div id="exam-status-title" class="exam-title">Practice Examination</div>
+            <!-- Exam Display & Submission -->
+            <div class="arena-main-pane">
+              <div class="exam-top-bar">
+                <div id="exam-status-title" class="exam-heading">Practice Examination</div>
                 <div class="exam-actions">
-                  <button id="btn-export-worksheet" class="secondary-btn" style="display:none;">
-                    📥 Export Worksheet (Print/PDF)
+                  <button id="btn-export-worksheet" class="secondary-glass-btn" style="display:none;">
+                    📥 Export Worksheet (Print / PDF)
                   </button>
                 </div>
               </div>
 
-              <div id="quiz-container" class="quiz-container">
-                <div class="empty-state">
-                  <div class="empty-icon">📝</div>
+              <div id="quiz-container" class="quiz-scroll-container">
+                <div class="empty-state-card">
+                  <div class="empty-icon-glow">📝</div>
                   <h3>Ready for Assessment</h3>
                   <p>Configure your topic on the left and click <strong>Generate Assessment</strong> to begin.</p>
                 </div>
               </div>
 
-              <div id="quiz-footer" class="quiz-footer" style="display: none;">
-                <button id="btn-submit-quiz" class="primary-btn glow-btn">Submit for Instant Grading</button>
+              <div id="quiz-footer" class="quiz-footer-bar" style="display: none;">
+                <button id="btn-submit-quiz" class="primary-gradient-btn glow-btn">Submit for Instant Grading</button>
               </div>
 
               <!-- Scorecard Results -->
-              <div id="quiz-results" class="quiz-results" style="display: none;"></div>
+              <div id="quiz-results" class="quiz-results-card" style="display: none;"></div>
             </div>
+
           </div>
         </section>
 
         <!-- Tab 4: Document Hub -->
         <section id="tab-docs" class="tab-pane">
-          <div class="docs-layout">
-            <div class="glass-card upload-card">
-              <h3 class="card-title">📤 Ingest Academic Documents</h3>
-              <p class="card-subtitle">Upload your course PDFs, PPTX lecture slides, DOCX syllabi, or TXT notes.</p>
+          <div class="docs-layout-grid">
+            
+            <!-- Ingest Upload Card -->
+            <div class="glass-surface upload-card-modern">
+              <h3 class="pane-title">📤 Ingest Academic Documents</h3>
+              <p class="pane-subtitle">Upload your course PDFs, PPTX lecture slides, DOCX syllabi, or TXT notes.</p>
               
-              <div id="drop-zone" class="drop-zone">
-                <div class="drop-icon">📁</div>
-                <p>Drag & Drop files here, or <span class="browse-link">browse</span></p>
-                <span class="drop-formats">Supports PDF, PPTX, DOCX, TXT</span>
+              <div id="drop-zone" class="modern-dropzone">
+                <div class="dropzone-glow"></div>
+                <div class="drop-icon-wrap">📁</div>
+                <p class="drop-main-text">Drag & Drop files here, or <span class="browse-link">browse</span></p>
+                <span class="drop-sub-text">Supports PDF, PPTX, DOCX, TXT</span>
                 <input type="file" id="file-input" multiple accept=".pdf,.pptx,.docx,.txt" style="display:none;">
               </div>
 
-              <div class="sample-loader-section">
+              <div class="sample-loader-banner">
                 <span>Want to test immediately?</span>
-                <button id="btn-load-sample" class="secondary-btn">Load Preloaded CS301 OS Syllabus</button>
+                <button id="btn-load-sample" class="secondary-glass-btn">Load Preloaded CS301 OS Syllabus</button>
               </div>
             </div>
 
             <!-- Document Index List -->
-            <div class="glass-card doc-list-card">
-              <div class="doc-list-header">
-                <h3 class="card-title">📂 Indexed Course Materials</h3>
-                <button id="btn-clear-docs" class="danger-btn text-btn">Clear All</button>
+            <div class="glass-surface doc-index-card">
+              <div class="doc-list-top">
+                <h3 class="pane-title">📂 Indexed Course Materials</h3>
+                <button id="btn-clear-docs" class="danger-glass-btn">Clear All</button>
               </div>
-              <div id="documents-table-container">
-                <div class="empty-state">
+              <div id="documents-table-container" class="doc-list-scroll">
+                <div class="empty-state-card">
                   <p>No documents uploaded yet.</p>
                 </div>
               </div>
             </div>
+
           </div>
         </section>
 
         <!-- Tab 5: Revision & Flashcards -->
         <section id="tab-flashcards" class="tab-pane">
-          <div class="flashcards-layout">
-            <div class="flashcards-toolbar">
-              <div class="toolbar-left">
-                <input type="text" id="flashcard-topic" class="styled-input" placeholder="Topic for flashcards..." value="Core Exam Topics">
-                <button id="btn-generate-cards" class="primary-btn">Generate Flashcard Deck</button>
+          <div class="flashcards-layout-pane">
+            <div class="flashcards-top-toolbar">
+              <div class="toolbar-left-group">
+                <input type="text" id="flashcard-topic" class="modern-input" placeholder="Topic for flashcards..." value="Core Exam Topics">
+                <button id="btn-generate-cards" class="primary-gradient-btn">Generate Flashcard Deck</button>
               </div>
-              <button id="btn-generate-cheatsheet" class="secondary-btn">Compile Chapter Cheat-Sheet</button>
+              <button id="btn-generate-cheatsheet" class="secondary-glass-btn">Compile Chapter Cheat-Sheet</button>
             </div>
 
-            <!-- Flashcards Carousel -->
-            <div id="flashcards-container" class="flashcards-container">
-              <div class="empty-state">
-                <div class="empty-icon">⚡</div>
+            <!-- Flashcards 3D Grid -->
+            <div id="flashcards-container" class="flashcards-3d-grid">
+              <div class="empty-state-card">
+                <div class="empty-icon-glow">⚡</div>
                 <h3>Active Recall Flashcards</h3>
                 <p>Generate high-yield revision cards with 3D flip functionality.</p>
               </div>
             </div>
 
             <!-- Cheat-Sheet Output -->
-            <div id="cheatsheet-output" class="glass-card cheatsheet-output" style="display: none;">
-              <div class="cheatsheet-header">
+            <div id="cheatsheet-output" class="glass-surface cheatsheet-pane" style="display: none;">
+              <div class="cheatsheet-top-bar">
                 <h3>📖 High-Yield Revision Summary</h3>
-                <button id="btn-download-cheatsheet" class="secondary-btn">Download Markdown</button>
+                <button id="btn-download-cheatsheet" class="secondary-glass-btn">Download Markdown</button>
               </div>
-              <div id="cheatsheet-content" class="cheatsheet-content"></div>
+              <div id="cheatsheet-content" class="cheatsheet-body"></div>
             </div>
           </div>
         </section>
 
       </main>
 
-      <!-- 3. Split-Screen Studio & Citation Inspector Canvas (Right) -->
+      <!-- 2.3 Split-Screen Studio & Citation Inspector (Right) -->
       <aside id="canvas-studio" class="canvas-studio collapsed">
-        <div class="canvas-header">
-          <div class="canvas-title-group">
+        
+        <!-- Studio Header -->
+        <div class="canvas-header-bar">
+          <div class="canvas-header-left">
             <span class="canvas-icon">🎨</span>
             <div class="canvas-title" id="canvas-title">Interactive Studio</div>
           </div>
-          <div class="canvas-actions">
+          <div class="canvas-header-actions">
             <button id="btn-copy-canvas" class="icon-btn-sm" title="Copy Content">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -429,57 +525,66 @@
           </div>
         </div>
 
-        <!-- Studio Mode Tabs -->
-        <div class="canvas-tabs">
-          <button class="canvas-tab active" data-studio="code">💻 Code Studio</button>
-          <button class="canvas-tab" data-studio="inspector">🔍 Source Inspector</button>
-          <button class="canvas-tab" data-studio="notes">📝 Notes & Proofs</button>
+        <!-- Studio Segmented Mode Tabs -->
+        <div class="canvas-tabs-bar">
+          <button class="canvas-tab-btn active" data-studio="code">💻 Code Studio</button>
+          <button class="canvas-tab-btn" data-studio="inspector">🔍 Source Inspector</button>
+          <button class="canvas-tab-btn" data-studio="notes">📝 Notes & Proofs</button>
         </div>
 
         <!-- Studio Content Panes -->
-        <div class="canvas-body">
+        <div class="canvas-body-scroll">
           
           <!-- Pane 1: Code Studio & Execution Console -->
           <div id="studio-pane-code" class="studio-pane active">
-            <div class="code-studio-toolbar">
-              <span id="code-lang-tag" class="lang-tag">python</span>
-              <button id="btn-run-code" class="run-code-btn">▶ Run Code</button>
+            <div class="code-studio-bar">
+              <span id="code-lang-tag" class="lang-badge">python</span>
+              <button id="btn-run-code" class="run-code-pill">▶ Run Code</button>
             </div>
-            <div class="editor-wrapper">
+            
+            <div class="tokyo-night-editor">
               <textarea id="canvas-code-editor" spellcheck="false"></textarea>
             </div>
-            <div class="console-box">
-              <div class="console-header">Console Output</div>
-              <pre id="console-output" class="console-output">Click "▶ Run Code" to execute simulation...</pre>
+
+            <div class="terminal-box">
+              <div class="terminal-bar">
+                <span class="term-dot red"></span>
+                <span class="term-dot yellow"></span>
+                <span class="term-dot green"></span>
+                <span class="term-title">Console Output</span>
+              </div>
+              <pre id="console-output" class="console-text">Click "▶ Run Code" to execute simulation...</pre>
             </div>
           </div>
 
           <!-- Pane 2: Document Source & Citation Inspector -->
           <div id="studio-pane-inspector" class="studio-pane">
-            <div class="inspector-card">
-              <div class="inspector-meta-row">
-                <span id="inspector-doc-name" class="inspector-doc-pill">📄 operating_systems_sample.txt</span>
-                <span id="inspector-page-num" class="inspector-page-pill">Page 1</span>
+            <div class="inspector-glass-card">
+              <div class="inspector-pills-row">
+                <span id="inspector-doc-name" class="inspector-doc-tag">📄 operating_systems_sample.txt</span>
+                <span id="inspector-page-num" class="inspector-page-tag">Page 1</span>
               </div>
-              <div class="similarity-meter-wrapper">
-                <div class="meter-label">
+
+              <div class="relevance-meter-box">
+                <div class="meter-meta">
                   <span>Relevance Match:</span>
                   <strong id="inspector-sim-score">96%</strong>
                 </div>
-                <div class="meter-bar-track">
-                  <div id="inspector-meter-fill" class="meter-bar-fill" style="width: 96%;"></div>
+                <div class="meter-track">
+                  <div id="inspector-meter-fill" class="meter-fill" style="width: 96%;"></div>
                 </div>
               </div>
-              <div class="inspector-snippet-box">
-                <div class="snippet-header">Verified Source Excerpt:</div>
-                <div id="inspector-highlighted-text" class="highlighted-text"></div>
+
+              <div class="snippet-highlight-box">
+                <div class="snippet-title">Verified Source Excerpt:</div>
+                <div id="inspector-highlighted-text" class="glow-excerpt-text"></div>
               </div>
             </div>
           </div>
 
           <!-- Pane 3: Notes & Math Proofs -->
           <div id="studio-pane-notes" class="studio-pane">
-            <div id="canvas-notes-content" class="notes-content"></div>
+            <div id="canvas-notes-content" class="notes-markdown-body"></div>
           </div>
 
         </div>
@@ -487,27 +592,29 @@
 
     </div>
 
-    <!-- Settings Modal -->
+    <!-- 3. Settings Modal Backdrop -->
     <div id="settings-modal" class="modal-backdrop" style="display: none;">
-      <div class="glass-card modal-content">
-        <div class="modal-header">
+      <div class="glass-surface modal-dialog-box">
+        <div class="modal-header-bar">
           <h3>⚙️ Engine & API Settings</h3>
           <button id="btn-close-settings" class="icon-btn">&times;</button>
         </div>
-        <div class="modal-body">
-          <div class="form-group">
+        <div class="modal-body-content">
+          <div class="form-field">
             <label for="gemini-key-input">Google Gemini API Key:</label>
-            <input type="password" id="gemini-key-input" class="styled-input" placeholder="Enter AI Studio API Key (AIzaSy...)">
-            <small class="form-hint">Enables real-time live LLM streaming across all topics.</small>
+            <input type="password" id="gemini-key-input" class="modern-input" placeholder="Enter AI Studio Key (AIzaSy...)">
+            <small class="field-hint">Enables real-time live LLM streaming across all topics.</small>
           </div>
-          <div class="form-group">
+          
+          <div class="form-field">
             <label for="model-select">Active Generative Model:</label>
-            <select id="model-select" class="styled-select">
+            <select id="model-select" class="modern-select">
               <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash (Ultra Fast & Concise)</option>
               <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Complex Reasoning)</option>
             </select>
           </div>
-          <button id="btn-save-settings" class="primary-btn glow-btn">Save Configurations</button>
+
+          <button id="btn-save-settings" class="primary-gradient-btn glow-btn">Save Configurations</button>
         </div>
       </div>
     </div>
@@ -515,6 +622,6 @@
   </div>
 
   <!-- App Script -->
-  <script src="/static/js/app.js?v=2.2.1"></script>
+  <script src="/static/js/app.js?v=2.3.0"></script>
 </body>
 </html>
