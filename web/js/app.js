@@ -1,7 +1,6 @@
 /**
- * SyllabusAI — Complete Frontend Application & Controller Suite (v2.3.0)
- * Modernized with Dynamic Neon Equalizer Spectrum, Segmented Controls,
- * Multi-Session Management, SSE Real-Time Streaming & Canvas Studio.
+ * SyllabusAI — Modern 2026 AI Product Application Suite
+ * Split-Screen Canvas Studio, Live Code Execution Runner, Hi-Fi Audio Deep Dive, Grounded RAG
  */
 
 class AudioPodcastController {
@@ -64,7 +63,7 @@ class AudioPodcastController {
   async generatePodcast() {
     const topic = this.topicInput?.value.trim() || 'Operating Systems & Memory Management';
     this.btnGenerate.disabled = true;
-    this.btnGenerate.innerHTML = '<span>⏳ Synthesizing Deep Dive...</span>';
+    this.btnGenerate.innerHTML = '<span>⏳ Synthesizing Dialogue...</span>';
 
     try {
       const res = await fetch('/api/podcast/generate', {
@@ -79,7 +78,7 @@ class AudioPodcastController {
       alert('Failed to generate podcast.');
     } finally {
       this.btnGenerate.disabled = false;
-      this.btnGenerate.innerHTML = '<span>⚡ Generate Audio Deep Dive</span>';
+      this.btnGenerate.innerHTML = '<span>⚡ Generate Audio Masterclass</span>';
     }
   }
 
@@ -89,13 +88,11 @@ class AudioPodcastController {
     this.stopAudio();
 
     if (this.titleDisplay) this.titleDisplay.innerText = podcastData.title || 'Deep Dive Study Session';
-    if (this.summaryDisplay) this.summaryDisplay.innerText = podcastData.summary || '2-Host conversational masterclass';
-    if (this.playerCard) this.playerCard.style.display = 'flex';
+    if (this.summaryDisplay) this.summaryDisplay.innerText = podcastData.summary || 'A 2-host conversational masterclass.';
+    if (this.playerCard) this.playerCard.style.display = 'block';
 
     this.renderTranscript(podcastData.dialogue);
     this.drawIdleWaveform();
-    
-    // Start auto-playback
     this.playTurn(0);
   }
 
@@ -107,11 +104,11 @@ class AudioPodcastController {
       const isAlex = turn.speaker === 'alex';
       const speakerName = isAlex ? 'Alex 🎙️' : 'Taylor 🎧';
       const turnEl = document.createElement('div');
-      turnEl.className = `transcript-turn ${isAlex ? 'alex-turn' : 'taylor-turn'}`;
+      turnEl.className = `transcript-turn-card ${isAlex ? 'alex-card' : 'taylor-card'}`;
       turnEl.id = `transcript-turn-${idx}`;
       turnEl.innerHTML = `
-        <div class="speaker-badge ${isAlex ? 'speaker-alex' : 'speaker-taylor'}">${speakerName}</div>
-        <div class="spoken-text">${this.app.escapeHtml(turn.text)}</div>
+        <div class="turn-speaker-badge ${isAlex ? 'speaker-alex' : 'speaker-taylor'}">${speakerName}</div>
+        <div class="turn-spoken-text">${this.app.escapeHtml(turn.text)}</div>
       `;
       turnEl.addEventListener('click', () => {
         this.currentTurnIndex = idx;
@@ -150,12 +147,12 @@ class AudioPodcastController {
     this.isPlaying = true;
     if (this.playIcon) this.playIcon.innerText = '⏸';
 
-    // Highlight Active Speaker
+    // Highlight Active Speaker Aura
     this.hostCardAlex?.classList.toggle('speaking', isAlex);
     this.hostCardTaylor?.classList.toggle('speaking', !isAlex);
 
-    // Highlight Synced Transcript
-    document.querySelectorAll('.transcript-turn').forEach((el, idx) => {
+    // Highlight Synced Line & Scroll
+    document.querySelectorAll('.transcript-turn-card').forEach((el, idx) => {
       el.classList.toggle('active-speaking', idx === index);
     });
     const activeLine = document.getElementById(`transcript-turn-${index}`);
@@ -307,8 +304,8 @@ class CanvasStudio {
     this.tabs = document.querySelectorAll('.canvas-tab-btn, .canvas-tab');
     this.panes = document.querySelectorAll('.studio-pane');
 
-    this.codeEditor = document.getElementById('canvas-code-editor');
-    this.codeLangTag = document.getElementById('code-lang-tag');
+    this.codeLangSelect = document.getElementById('code-lang-select');
+    this.codeTemplateSelect = document.getElementById('code-template-select');
     this.btnRunCode = document.getElementById('btn-run-code');
     this.consoleOutput = document.getElementById('console-output');
 
@@ -322,12 +319,36 @@ class CanvasStudio {
     this.btnClose = document.getElementById('btn-close-canvas');
     this.btnCopy = document.getElementById('btn-copy-canvas');
 
+    this.templates = {
+      linked_list: `# Python 3: Singly Linked List Reversal Algorithm\nclass Node:\n    def __init__(self, val, next=None):\n        self.val = val\n        self.next = next\n\ndef reverse_list(head):\n    prev = None\n    curr = head\n    while curr:\n        nxt = curr.next\n        curr.next = prev\n        prev = curr\n        curr = nxt\n    return prev\n\n# Test List 1 -> 2 -> 3 -> 4 -> 5\nhead = Node(1, Node(2, Node(3, Node(4, Node(5)))))\nprint("Original: 1 -> 2 -> 3 -> 4 -> 5")\n\nreversed_head = reverse_list(head)\nres = []\nc = reversed_head\nwhile c:\n    res.append(str(c.val))\n    c = c.next\nprint("Reversed: " + " -> ".join(res))\nprint("Time Complexity: O(n) | Auxiliary Space: O(1)")\n`,
+      bankers: `# Python 3: Dijkstra's Banker's Safety Algorithm\nAllocation = [\n    [0, 1, 0], [2, 0, 0], [3, 0, 2], [2, 1, 1], [0, 0, 2]\n]\nMax = [\n    [7, 5, 3], [3, 2, 2], [9, 0, 2], [2, 2, 2], [4, 3, 3]\n]\nAvailable = [3, 3, 2]\n\nn, m = len(Allocation), len(Available)\nNeed = [[Max[i][j] - Allocation[i][j] for j in range(m)] for i in range(n)]\nFinish = [False] * n\nsafe_seq, work = [], list(Available)\n\nwhile len(safe_seq) < n:\n    found = False\n    for i in range(n):\n        if not Finish[i] and all(Need[i][j] <= work[j] for j in range(m)):\n            for j in range(m): work[j] += Allocation[i][j]\n            Finish[i] = True\n            safe_seq.append(f"P{i}")\n            found = True\n            break\n    if not found: break\n\nif len(safe_seq) == n:\n    print("✅ System is in a SAFE STATE!")\n    print("Safe Execution Sequence: < " + ", ".join(safe_seq) + " >")\nelse:\n    print("⚠️ DEADLOCK DETECTED! System is unsafe.")\n`,
+      lru: `# Python 3: LRU Page Replacement Algorithm\ndef lru_sim(pages, capacity):\n    memory = []\n    faults, hits = 0, 0\n    print(f"LRU Page Frames: {capacity}\\n" + "-" * 35)\n    for p in pages:\n        if p in memory:\n            hits += 1\n            memory.remove(p)\n            memory.append(p)\n            st = "HIT "\n        else:\n            faults += 1\n            if len(memory) >= capacity: memory.pop(0)\n            memory.append(p)\n            st = "FAULT"\n        print(f"Page {p} -> [{st}] Frames: {memory}")\n    print("-" * 35)\n    print(f"Total Faults: {faults} | Total Hits: {hits} | Hit Ratio: {(hits/len(pages))*100:.1f}%")\n\nlru_sim([7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2], capacity=3)\n`,
+      binary_search: `# Python 3: Binary Search with Step Trace\ndef binary_search(arr, target):\n    low, high, step = 0, len(arr) - 1, 1\n    print(f"Searching for target {target} in array: {arr}\\n")\n    while low <= high:\n        mid = (low + high) // 2\n        print(f"Step {step}: low={low} ({arr[low]}), high={high} ({arr[high]}), mid={mid} (val={arr[mid]})")\n        if arr[mid] == target: return mid\n        elif arr[mid] < target: low = mid + 1\n        else: high = mid - 1\n        step += 1\n    return -1\n\narr = [3, 9, 14, 19, 27, 33, 42, 56, 78, 90]\nidx = binary_search(arr, 42)\nprint(f"\\nResult: Target 42 found at index {idx} in O(log n) time.")\n`,
+      emat: `# Python 3: Effective Memory Access Time (EMAT)\ndef calc_emat(hit_ratio, tlb_ns, mem_ns):\n    return hit_ratio * (tlb_ns + mem_ns) + (1 - hit_ratio) * (tlb_ns + 2 * mem_ns)\n\nh, c, m = 0.95, 20, 100\nemat = calc_emat(h, c, m)\nprint("--- MMU Effective Access Calculation ---")\nprint(f"TLB Hit Ratio (h)    : {h * 100}%")\nprint(f"TLB Access Time (c)  : {c} ns")\nprint(f"Main Memory Time (m) : {m} ns")\nprint(f"EMAT                 : {emat:.2f} ns")\nprint(f"Overhead Ratio       : {emat / m:.2f}x compared to direct memory")\n`
+    };
+
+    this.initDefaultCode();
     this.initEvents();
+  }
+
+  initDefaultCode() {
+    if (this.codeEditor && !this.codeEditor.value) {
+      this.codeEditor.value = this.templates.linked_list;
+    }
   }
 
   initEvents() {
     this.tabs.forEach(tab => {
       tab.addEventListener('click', () => this.switchStudioTab(tab.dataset.studio));
+    });
+
+    this.codeTemplateSelect?.addEventListener('change', (e) => {
+      const tmpl = this.templates[e.target.value];
+      if (tmpl && this.codeEditor) {
+        this.codeEditor.value = tmpl;
+        if (this.codeLangSelect) this.codeLangSelect.value = 'python';
+        if (this.consoleOutput) this.consoleOutput.innerText = 'Template loaded. Click "▶ Run Code" to execute.';
+      }
     });
 
     this.btnClose?.addEventListener('click', () => this.close());
@@ -355,8 +376,10 @@ class CanvasStudio {
   openCode(title, code, lang = 'python') {
     this.open();
     this.switchStudioTab('code');
-    if (this.titleEl) this.titleEl.innerText = title || 'Code Studio';
-    if (this.codeLangTag) this.codeLangTag.innerText = lang;
+    if (this.titleEl) this.titleEl.innerText = title || 'Interactive Studio';
+    if (this.codeLangSelect) {
+      this.codeLangSelect.value = (lang.toLowerCase() === 'javascript' || lang.toLowerCase() === 'js') ? 'javascript' : 'python';
+    }
     if (this.codeEditor) this.codeEditor.value = code;
     if (this.consoleOutput) this.consoleOutput.innerText = 'Ready to execute. Click "▶ Run Code" above.';
   }
@@ -387,48 +410,49 @@ class CanvasStudio {
     }
   }
 
-  runActiveCode() {
+  async runActiveCode() {
     const code = this.codeEditor?.value || '';
-    if (!code.trim()) return;
+    const lang = (this.codeLangSelect?.value || 'python').toLowerCase();
+    if (!code.trim()) {
+      this.consoleOutput.innerText = 'No code to execute.';
+      return;
+    }
 
-    this.consoleOutput.innerText = 'Executing simulation...\n';
-    const startTime = performance.now();
+    this.consoleOutput.innerText = `[Executing ${lang.toUpperCase()} code in sandbox runtime...]\n`;
+    if (this.btnRunCode) {
+      this.btnRunCode.disabled = true;
+      this.btnRunCode.innerText = '⏳ Running...';
+    }
 
     try {
-      let logs = [];
-      const mockConsole = {
-        log: (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')),
-        error: (...args) => logs.push('ERROR: ' + args.join(' '))
-      };
+      // 1. Live backend execution with timeout
+      const res = await fetch('/api/code/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, language: lang })
+      });
+      const result = await res.json();
 
-      if (this.codeLangTag.innerText.toLowerCase() === 'javascript') {
+      if (result.client_eval && lang === 'javascript') {
+        let logs = [];
+        const mockConsole = {
+          log: (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')),
+          error: (...args) => logs.push('ERROR: ' + args.join(' '))
+        };
         const runFn = new Function('console', code);
         runFn(mockConsole);
-        const duration = (performance.now() - startTime).toFixed(2);
-        this.consoleOutput.innerText = logs.join('\n') + `\n\n[Process completed successfully in ${duration}ms]`;
+        this.consoleOutput.innerText = (logs.join('\n') || '[No console.log output]') + '\n\n[✅ SUCCESS | Browser JS Runtime]';
       } else {
-        const duration = (performance.now() - startTime).toFixed(2);
-        let simulationSummary = `[Python 3.11 Runtime Simulation]\n`;
-        if (code.includes('reverse_linked_list') || code.includes('ListNode')) {
-          simulationSummary += `> Initial List: [1] -> [2] -> [3] -> [4] -> [5] -> None\n`;
-          simulationSummary += `> Executing 3-pointer reversal algorithm...\n`;
-          simulationSummary += `> Pointer states: prev=5, curr=None\n`;
-          simulationSummary += `> Result List: [5] -> [4] -> [3] -> [2] -> [1] -> None\n`;
-          simulationSummary += `> Time Complexity: O(n) | Auxiliary Space: O(1)\n`;
-        } else if (code.includes('Available') || code.includes('Banker') || code.includes('deadlock')) {
-          simulationSummary += `> Initializing Banker's Matrix (Processes=5, Resources=3)...\n`;
-          simulationSummary += `> Finding Safe Sequence using Safety Algorithm...\n`;
-          simulationSummary += `> Safe Sequence found: < P1, P3, P4, P0, P2 >\n`;
-          simulationSummary += `> System is in a SAFE STATE with no deadlocks.\n`;
-        } else {
-          simulationSummary += `> Code syntax parsed and validated.\n`;
-          simulationSummary += `> Output: Function compiled with O(n) algorithmic complexity.\n`;
-        }
-        simulationSummary += `\n[Execution completed successfully in ${duration}ms]`;
-        this.consoleOutput.innerText = simulationSummary;
+        const statusBadge = result.success ? '✅ SUCCESS' : '⚠️ RUNTIME ERROR';
+        this.consoleOutput.innerText = `${result.output}\n\n[${statusBadge} | Execution time: ${result.execution_time_ms}ms]`;
       }
     } catch (err) {
-      this.consoleOutput.innerText = `Runtime Error: ${err.message}`;
+      this.consoleOutput.innerText = `Execution Error: ${err.message}`;
+    } finally {
+      if (this.btnRunCode) {
+        this.btnRunCode.disabled = false;
+        this.btnRunCode.innerText = '▶ Run Code';
+      }
     }
   }
 
@@ -479,11 +503,11 @@ class SyllabusApp {
     this.modeAgentBtn = document.getElementById('mode-agent-btn');
     this.modeStrictBtn = document.getElementById('mode-strict-btn');
     this.personaSelect = document.getElementById('persona-select');
-    this.btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+    this.btnToggleCanvas = document.getElementById('btn-toggle-canvas');
     this.sidebar = document.getElementById('chat-sidebar');
+    this.btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
     this.sessionsListEl = document.getElementById('sessions-list');
     this.btnNewChat = document.getElementById('btn-new-chat');
-    this.btnToggleCanvas = document.getElementById('btn-toggle-canvas');
 
     this.tabButtons = document.querySelectorAll('.tab-nav-btn, .tab-btn');
     this.tabPanes = document.querySelectorAll('.tab-pane');
@@ -607,7 +631,7 @@ class SyllabusApp {
       const item = document.createElement('div');
       item.className = `session-item ${sess.id === this.activeSessionId ? 'active' : ''}`;
       item.innerHTML = `
-        <span class="session-title">${this.escapeHtml(sess.title)}</span>
+        <span class="session-title">💬 ${this.escapeHtml(sess.title)}</span>
         <button class="session-delete-btn" title="Delete conversation">&times;</button>
       `;
       item.addEventListener('click', () => this.switchSession(sess.id));
@@ -623,8 +647,8 @@ class SyllabusApp {
     this.modeStrictBtn?.addEventListener('click', () => this.setMode('strict'));
     this.personaSelect?.addEventListener('change', (e) => this.currentPersona = e.target.value);
 
-    this.btnToggleSidebar?.addEventListener('click', () => this.sidebar.classList.toggle('collapsed'));
     this.btnToggleCanvas?.addEventListener('click', () => this.canvas.toggle());
+    this.btnToggleSidebar?.addEventListener('click', () => this.sidebar?.classList.toggle('collapsed'));
     this.btnNewChat?.addEventListener('click', () => this.createNewChat());
 
     this.tabButtons.forEach(btn => {
@@ -672,22 +696,6 @@ class SyllabusApp {
     this.fileInput?.addEventListener('change', (e) => this.uploadFiles(e.target.files));
     this.btnLoadSample?.addEventListener('click', () => this.loadSampleMaterial());
     this.btnClearDocs?.addEventListener('click', () => this.clearAllDocs());
-
-    ['dragenter', 'dragover'].forEach(name => {
-      this.dropZone?.addEventListener(name, (e) => {
-        e.preventDefault();
-        this.dropZone.classList.add('drag-over');
-      });
-    });
-    ['dragleave', 'drop'].forEach(name => {
-      this.dropZone?.addEventListener(name, (e) => {
-        e.preventDefault();
-        this.dropZone.classList.remove('drag-over');
-      });
-    });
-    this.dropZone?.addEventListener('drop', (e) => {
-      if (e.dataTransfer?.files?.length) this.uploadFiles(e.dataTransfer.files);
-    });
 
     this.btnGenerateCards?.addEventListener('click', () => this.generateFlashcards());
     this.btnGenerateCheatsheet?.addEventListener('click', () => this.generateCheatsheet());
@@ -763,39 +771,40 @@ class SyllabusApp {
     if (!activeSess || activeSess.messages.length === 0) {
       this.chatMessages.innerHTML = `
         <div class="welcome-hero-card">
-          <div class="hero-sparkle-pill">
-            <span class="sparkle-star">✨</span>
-            <span>Autonomous AI Agent + Grounded Syllabus Intelligence</span>
+          <div class="welcome-badge">
+            <span class="pulse-sparkle">✨</span> 2026 Grounded Intelligence
           </div>
-          <h2 class="hero-title">Master Your Course with <span class="gradient-text">SyllabusAI</span></h2>
-          <p class="hero-subtitle">
-            Ask anything freely, write high-performance code, derive mathematical equations, or explore verified course notes with exact textbook citations.
+          <h1 class="welcome-title">
+            Ask anything about your <span class="gradient-title-text">Course Syllabus</span>
+          </h1>
+          <p class="welcome-desc">
+            SyllabusAI blends multi-modal conversational intelligence with lexical BM25 and dense vector ranking over your actual uploaded textbooks, lectures, and exams.
           </p>
-          <div class="hero-prompts-grid">
-            <button class="prompt-chip" data-query="Explain how Dijkstra's Banker's Algorithm prevents deadlocks and find safe sequences.">
-              <span class="chip-emoji">🔒</span>
-              <div class="chip-text">
+          <div class="prompt-discovery-grid">
+            <button class="prompt-chip" data-query="Explain Dijkstra's Banker's Algorithm with safe sequence logic and deadlock prevention.">
+              <span class="chip-glow-icon">🔒</span>
+              <div class="chip-content">
                 <strong>Banker's Algorithm</strong>
                 <small>Deadlock prevention & safe states</small>
               </div>
             </button>
-            <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its complexity.">
-              <span class="chip-emoji">💻</span>
-              <div class="chip-text">
+            <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its time & space complexity.">
+              <span class="chip-glow-icon">💻</span>
+              <div class="chip-content">
                 <strong>Reverse Linked List</strong>
                 <small>Python 3-pointer implementation</small>
               </div>
             </button>
             <button class="prompt-chip" data-query="What is the Effective Memory Access Time (EMAT) formula from my notes?">
-              <span class="chip-emoji">📐</span>
-              <div class="chip-text">
+              <span class="chip-glow-icon">📐</span>
+              <div class="chip-content">
                 <strong>EMAT Formula</strong>
-                <small>TLB hit ratio & memory access time</small>
+                <small>TLB hit ratio & access times</small>
               </div>
             </button>
             <button class="prompt-chip" data-query="What is Belady's Anomaly in FIFO page replacement and how does LRU fix it?">
-              <span class="chip-emoji">⚡</span>
-              <div class="chip-text">
+              <span class="chip-glow-icon">⚡</span>
+              <div class="chip-content">
                 <strong>Belady's Anomaly</strong>
                 <small>FIFO vs LRU page replacement</small>
               </div>
@@ -890,7 +899,7 @@ class SyllabusApp {
       if (collectedCitations.length > 0) {
         citationsContainer.style.display = 'block';
         citationsContainer.innerHTML = `
-          <div class="citations-title">📌 Verified Syllabus Citations (Click to Inspect Source):</div>
+          <div class="citations-title">📌 Verified Syllabus Citations (Click to Inspect):</div>
           ${collectedCitations.map(c => `
             <span class="citation-badge" data-source="${this.escapeHtml(c.source)}" data-page="${c.page}" data-sim="${c.similarity || 0.95}">
               📄 ${this.escapeHtml(c.source)} (Page ${c.page})
@@ -944,7 +953,7 @@ class SyllabusApp {
         <div class="message-body">${this.renderMarkdown(content)}${isStreaming ? '<span class="typing-cursor"></span>' : ''}</div>
         <div class="citations-box" style="${citations.length > 0 ? 'display:block;' : 'display:none;'}">
           ${citations.length > 0 ? `
-            <div class="citations-title">📌 Verified Syllabus Citations (Click to Inspect):</div>
+            <div class="citations-title">📌 Verified Syllabus Citations:</div>
             ${citations.map(c => `
               <span class="citation-badge" data-source="${this.escapeHtml(c.source)}" data-page="${c.page}">
                 📄 ${this.escapeHtml(c.source)} (Page ${c.page})

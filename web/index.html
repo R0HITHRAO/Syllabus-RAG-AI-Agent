@@ -538,7 +538,20 @@
           <!-- Pane 1: Code Studio & Execution Console -->
           <div id="studio-pane-code" class="studio-pane active">
             <div class="code-studio-bar">
-              <span id="code-lang-tag" class="lang-badge">python</span>
+              <div class="studio-bar-left" style="display:flex; align-items:center; gap:8px;">
+                <select id="code-lang-select" class="lang-select-pill" style="background:var(--bg-tertiary); color:var(--text-main); border:1px solid var(--border-subtle); border-radius:8px; padding:4px 8px; font-size:12px; font-weight:600; cursor:pointer;">
+                  <option value="python" selected>🐍 Python 3</option>
+                  <option value="javascript">⚡ JavaScript</option>
+                </select>
+                <select id="code-template-select" class="template-select-pill" style="background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-subtle); border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer;">
+                  <option value="" disabled selected>📂 Templates...</option>
+                  <option value="linked_list">Linked List Reversal</option>
+                  <option value="bankers">Banker's Algorithm</option>
+                  <option value="lru">LRU Page Replacement</option>
+                  <option value="binary_search">Binary Search</option>
+                  <option value="emat">Effective Memory Access Time</option>
+                </select>
+              </div>
               <button id="btn-run-code" class="run-code-pill">▶ Run Code</button>
             </div>
             

@@ -98,6 +98,13 @@ class FlashcardRequest(BaseModel):
     num_cards: int = 6
     filter_source: Optional[str] = None
 
+import subprocess
+import time
+
+class CodeRunRequest(BaseModel):
+    code: str
+    language: str = "python"
+
 class CheatSheetRequest(BaseModel):
     filter_source: Optional[str] = None
 
@@ -308,6 +315,63 @@ async def generate_cheatsheet(req: CheatSheetRequest):
     filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
     content = analyzer.generate_cheat_sheet(filter_source=filter_val)
     return {"cheatsheet": content}
+
+@app.post("/api/code/run")
+async def execute_code(req: CodeRunRequest):
+    code = req.code.strip()
+    lang = req.language.lower().strip()
+    
+    if not code:
+        return {"success": False, "output": "No code provided.", "execution_time_ms": 0}
+        
+    start_time = time.perf_counter()
+    
+    if lang in ["python", "py"]:
+        try:
+            process = subprocess.run(
+                [sys.executable, "-c", code],
+                capture_output=True,
+                text=True,
+                timeout=6,
+                encoding="utf-8",
+                errors="replace"
+            )
+            elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            stdout = process.stdout
+            stderr = process.stderr
+            
+            if process.returncode == 0:
+                output = stdout if stdout else "[Process completed with return code 0 (no stdout)]"
+                return {"success": True, "output": output, "execution_time_ms": elapsed_ms}
+            else:
+                output = (stderr or stdout).strip()
+                return {"success": False, "output": output, "execution_time_ms": elapsed_ms}
+        except subprocess.TimeoutExpired:
+            return {"success": False, "output": "⏱️ Execution timed out (limit: 6s). Check for infinite loops.", "execution_time_ms": 6000}
+        except Exception as e:
+            return {"success": False, "output": f"Execution error: {str(e)}", "execution_time_ms": 0}
+            
+    elif lang in ["javascript", "js", "node"]:
+        try:
+            node_path = shutil.which("node")
+            if node_path:
+                process = subprocess.run(
+                    [node_path, "-e", code],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    encoding="utf-8",
+                    errors="replace"
+                )
+                elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                output = process.stdout if process.returncode == 0 else (process.stderr or process.stdout)
+                return {"success": process.returncode == 0, "output": output, "execution_time_ms": elapsed_ms}
+        except Exception:
+            pass
+        return {"success": True, "output": "Executed via Browser JS Runtime", "client_eval": True}
+        
+    else:
+        return {"success": False, "output": f"Language '{lang}' execution not supported.", "execution_time_ms": 0}
 
 # ---------------------------------------------------------
 # Static Website Mounting
