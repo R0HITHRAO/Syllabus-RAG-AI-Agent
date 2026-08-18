@@ -1,6 +1,7 @@
 /**
- * SyllabusAI — GitHub Primer Application Suite (v2.4.0)
- * Native GitHub.com Layout, Copilot Streaming, Audio Deep Dive, Canvas Diff Studio
+ * SyllabusAI — Complete Frontend Application & Controller Suite (v2.3.0)
+ * Modernized with Dynamic Neon Equalizer Spectrum, Segmented Controls,
+ * Multi-Session Management, SSE Real-Time Streaming & Canvas Studio.
  */
 
 class AudioPodcastController {
@@ -63,7 +64,7 @@ class AudioPodcastController {
   async generatePodcast() {
     const topic = this.topicInput?.value.trim() || 'Operating Systems & Memory Management';
     this.btnGenerate.disabled = true;
-    this.btnGenerate.innerHTML = '<span>⏳ Generating Podcast...</span>';
+    this.btnGenerate.innerHTML = '<span>⏳ Synthesizing Deep Dive...</span>';
 
     try {
       const res = await fetch('/api/podcast/generate', {
@@ -78,7 +79,7 @@ class AudioPodcastController {
       alert('Failed to generate podcast.');
     } finally {
       this.btnGenerate.disabled = false;
-      this.btnGenerate.innerHTML = '<span>⚡ Generate Podcast</span>';
+      this.btnGenerate.innerHTML = '<span>⚡ Generate Audio Deep Dive</span>';
     }
   }
 
@@ -88,11 +89,13 @@ class AudioPodcastController {
     this.stopAudio();
 
     if (this.titleDisplay) this.titleDisplay.innerText = podcastData.title || 'Deep Dive Study Session';
-    if (this.summaryDisplay) this.summaryDisplay.innerText = podcastData.summary || 'A 2-host conversational masterclass.';
-    if (this.playerCard) this.playerCard.style.display = 'block';
+    if (this.summaryDisplay) this.summaryDisplay.innerText = podcastData.summary || '2-Host conversational masterclass';
+    if (this.playerCard) this.playerCard.style.display = 'flex';
 
     this.renderTranscript(podcastData.dialogue);
     this.drawIdleWaveform();
+    
+    // Start auto-playback
     this.playTurn(0);
   }
 
@@ -107,8 +110,8 @@ class AudioPodcastController {
       turnEl.className = `transcript-turn ${isAlex ? 'alex-turn' : 'taylor-turn'}`;
       turnEl.id = `transcript-turn-${idx}`;
       turnEl.innerHTML = `
-        <span class="speaker-badge ${isAlex ? 'speaker-alex' : 'speaker-taylor'}">${speakerName}:</span>
-        <span class="spoken-text">${this.app.escapeHtml(turn.text)}</span>
+        <div class="speaker-badge ${isAlex ? 'speaker-alex' : 'speaker-taylor'}">${speakerName}</div>
+        <div class="spoken-text">${this.app.escapeHtml(turn.text)}</div>
       `;
       turnEl.addEventListener('click', () => {
         this.currentTurnIndex = idx;
@@ -151,7 +154,7 @@ class AudioPodcastController {
     this.hostCardAlex?.classList.toggle('speaking', isAlex);
     this.hostCardTaylor?.classList.toggle('speaking', !isAlex);
 
-    // Highlight Synced Line & Scroll
+    // Highlight Synced Transcript
     document.querySelectorAll('.transcript-turn').forEach((el, idx) => {
       el.classList.toggle('active-speaking', idx === index);
     });
@@ -221,7 +224,7 @@ class AudioPodcastController {
     this.playTurn(nextIndex);
   }
 
-  /* --- GITHUB GREEN/BLUE EQUALIZER WAVEFORM --- */
+  /* --- DYNAMIC NEON EQUALIZER SPECTRUM --- */
   startWaveformAnimation() {
     this.stopWaveformAnimation();
     const render = (time) => {
@@ -249,20 +252,27 @@ class AudioPodcastController {
     ctx.clearRect(0, 0, width, height);
 
     const barCount = 36;
-    const barWidth = 5;
+    const barWidth = 6;
     const gap = (width - barCount * barWidth) / (barCount - 1);
 
-    ctx.fillStyle = '#238636';
+    const gradient = ctx.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, '#6366f1');
+    gradient.addColorStop(0.35, '#8b5cf6');
+    gradient.addColorStop(0.7, '#06b6d4');
+    gradient.addColorStop(1, '#38bdf8');
+    ctx.fillStyle = gradient;
 
     for (let i = 0; i < barCount; i++) {
       const freq1 = (i / barCount) * Math.PI * 3;
       const freq2 = (i / barCount) * Math.PI * 6;
       const wave = Math.sin(time * 0.007 + freq1) * 0.4 + Math.cos(time * 0.009 + freq2) * 0.3 + 0.5;
-      const waveHeight = Math.max(6, wave * (height - 8));
+      const waveHeight = Math.max(8, wave * (height - 8));
       const x = i * (barWidth + gap);
       const y = (height - waveHeight) / 2;
 
-      ctx.fillRect(x, y, barWidth, waveHeight);
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, waveHeight, 3);
+      ctx.fill();
     }
   }
 
@@ -273,16 +283,18 @@ class AudioPodcastController {
     const ctx = this.canvasCtx;
 
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#30363d';
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
 
     const barCount = 36;
-    const barWidth = 5;
+    const barWidth = 6;
     const gap = (width - barCount * barWidth) / (barCount - 1);
 
     for (let i = 0; i < barCount; i++) {
       const x = i * (barWidth + gap);
-      const y = (height - 4) / 2;
-      ctx.fillRect(x, y, barWidth, 4);
+      const y = (height - 6) / 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barWidth, 6, 3);
+      ctx.fill();
     }
   }
 }
@@ -292,7 +304,7 @@ class CanvasStudio {
     this.app = app;
     this.panel = document.getElementById('canvas-studio');
     this.titleEl = document.getElementById('canvas-title');
-    this.tabs = document.querySelectorAll('.gh-studio-tab, .canvas-tab');
+    this.tabs = document.querySelectorAll('.canvas-tab-btn, .canvas-tab');
     this.panes = document.querySelectorAll('.studio-pane');
 
     this.codeEditor = document.getElementById('canvas-code-editor');
@@ -307,7 +319,7 @@ class CanvasStudio {
     this.inspectorHighlightedText = document.getElementById('inspector-highlighted-text');
 
     this.notesContent = document.getElementById('canvas-notes-content');
-    this.btnClose = document.querySelector('.studio-actions .gh-icon-btn:last-child');
+    this.btnClose = document.getElementById('btn-close-canvas');
     this.btnCopy = document.getElementById('btn-copy-canvas');
 
     this.initEvents();
@@ -352,7 +364,7 @@ class CanvasStudio {
   openCitation(source, page, snippet, similarity = 0.95) {
     this.open();
     this.switchStudioTab('inspector');
-    if (this.titleEl) this.titleEl.innerText = 'Source Diff Inspector';
+    if (this.titleEl) this.titleEl.innerText = 'Source Document Inspector';
     if (this.inspectorDocName) this.inspectorDocName.innerText = `📄 ${source}`;
     if (this.inspectorPageNum) this.inspectorPageNum.innerText = `Page ${page}`;
     
@@ -393,7 +405,7 @@ class CanvasStudio {
         const runFn = new Function('console', code);
         runFn(mockConsole);
         const duration = (performance.now() - startTime).toFixed(2);
-        this.consoleOutput.innerText = logs.join('\n') + `\n\n[Process exited with code 0 in ${duration}ms]`;
+        this.consoleOutput.innerText = logs.join('\n') + `\n\n[Process completed successfully in ${duration}ms]`;
       } else {
         const duration = (performance.now() - startTime).toFixed(2);
         let simulationSummary = `[Python 3.11 Runtime Simulation]\n`;
@@ -412,7 +424,7 @@ class CanvasStudio {
           simulationSummary += `> Code syntax parsed and validated.\n`;
           simulationSummary += `> Output: Function compiled with O(n) algorithmic complexity.\n`;
         }
-        simulationSummary += `\n[Execution completed with exit code 0 in ${duration}ms]`;
+        simulationSummary += `\n[Execution completed successfully in ${duration}ms]`;
         this.consoleOutput.innerText = simulationSummary;
       }
     } catch (err) {
@@ -422,7 +434,7 @@ class CanvasStudio {
 
   copyActiveContent() {
     let content = '';
-    const activeTab = document.querySelector('.gh-studio-tab.active')?.dataset.studio;
+    const activeTab = document.querySelector('.canvas-tab-btn.active, .canvas-tab.active')?.dataset.studio;
     if (activeTab === 'code') content = this.codeEditor?.value || '';
     else if (activeTab === 'inspector') content = this.inspectorHighlightedText?.innerText || '';
     else content = this.notesContent?.innerText || '';
@@ -431,7 +443,7 @@ class CanvasStudio {
       if (this.btnCopy) {
         this.btnCopy.innerHTML = '✓';
         setTimeout(() => {
-          this.btnCopy.innerHTML = `<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path></svg>`;
+          this.btnCopy.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
         }, 1500);
       }
     });
@@ -442,7 +454,7 @@ class SyllabusApp {
   constructor() {
     this.currentMode = 'agent';
     this.currentPersona = 'general';
-    this.currentTheme = localStorage.getItem('syllabus_gh_theme') || 'dark';
+    this.currentTheme = localStorage.getItem('syllabus_theme') || 'nebula';
     this.sessions = this.loadSessions();
     this.activeSessionId = this.sessions.length > 0 ? this.sessions[0].id : this.createNewSessionId();
     
@@ -467,12 +479,13 @@ class SyllabusApp {
     this.modeAgentBtn = document.getElementById('mode-agent-btn');
     this.modeStrictBtn = document.getElementById('mode-strict-btn');
     this.personaSelect = document.getElementById('persona-select');
-    this.btnToggleCanvas = document.getElementById('btn-toggle-canvas');
+    this.btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
     this.sidebar = document.getElementById('chat-sidebar');
     this.sessionsListEl = document.getElementById('sessions-list');
     this.btnNewChat = document.getElementById('btn-new-chat');
+    this.btnToggleCanvas = document.getElementById('btn-toggle-canvas');
 
-    this.tabButtons = document.querySelectorAll('.gh-tab-item, .tab-btn');
+    this.tabButtons = document.querySelectorAll('.tab-nav-btn, .tab-btn');
     this.tabPanes = document.querySelectorAll('.tab-pane');
 
     this.chatMessages = document.getElementById('chat-messages');
@@ -515,15 +528,13 @@ class SyllabusApp {
 
   initTheme() {
     document.documentElement.setAttribute('data-theme', this.currentTheme);
-    document.documentElement.setAttribute('data-color-mode', this.currentTheme === 'light' ? 'light' : 'dark');
     if (this.themeSelect) this.themeSelect.value = this.currentTheme;
   }
 
   setTheme(themeName) {
     this.currentTheme = themeName;
     document.documentElement.setAttribute('data-theme', themeName);
-    document.documentElement.setAttribute('data-color-mode', themeName === 'light' ? 'light' : 'dark');
-    localStorage.setItem('syllabus_gh_theme', themeName);
+    localStorage.setItem('syllabus_theme', themeName);
   }
 
   createNewSessionId() {
@@ -596,7 +607,7 @@ class SyllabusApp {
       const item = document.createElement('div');
       item.className = `session-item ${sess.id === this.activeSessionId ? 'active' : ''}`;
       item.innerHTML = `
-        <span class="session-title">💬 ${this.escapeHtml(sess.title)}</span>
+        <span class="session-title">${this.escapeHtml(sess.title)}</span>
         <button class="session-delete-btn" title="Delete conversation">&times;</button>
       `;
       item.addEventListener('click', () => this.switchSession(sess.id));
@@ -612,6 +623,7 @@ class SyllabusApp {
     this.modeStrictBtn?.addEventListener('click', () => this.setMode('strict'));
     this.personaSelect?.addEventListener('change', (e) => this.currentPersona = e.target.value);
 
+    this.btnToggleSidebar?.addEventListener('click', () => this.sidebar.classList.toggle('collapsed'));
     this.btnToggleCanvas?.addEventListener('click', () => this.canvas.toggle());
     this.btnNewChat?.addEventListener('click', () => this.createNewChat());
 
@@ -660,6 +672,22 @@ class SyllabusApp {
     this.fileInput?.addEventListener('change', (e) => this.uploadFiles(e.target.files));
     this.btnLoadSample?.addEventListener('click', () => this.loadSampleMaterial());
     this.btnClearDocs?.addEventListener('click', () => this.clearAllDocs());
+
+    ['dragenter', 'dragover'].forEach(name => {
+      this.dropZone?.addEventListener(name, (e) => {
+        e.preventDefault();
+        this.dropZone.classList.add('drag-over');
+      });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      this.dropZone?.addEventListener(name, (e) => {
+        e.preventDefault();
+        this.dropZone.classList.remove('drag-over');
+      });
+    });
+    this.dropZone?.addEventListener('drop', (e) => {
+      if (e.dataTransfer?.files?.length) this.uploadFiles(e.dataTransfer.files);
+    });
 
     this.btnGenerateCards?.addEventListener('click', () => this.generateFlashcards());
     this.btnGenerateCheatsheet?.addEventListener('click', () => this.generateCheatsheet());
@@ -735,45 +763,43 @@ class SyllabusApp {
     if (!activeSess || activeSess.messages.length === 0) {
       this.chatMessages.innerHTML = `
         <div class="welcome-hero-card">
-          <div class="gh-readme-header">
-            <svg class="octicon octicon-book" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M0 1.75A.75.75 0 0 1 .75 1h4.253c1.227 0 2.317.59 3 1.501A3.743 3.743 0 0 1 11.006 1h4.244a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75h-4.244a2.25 2.25 0 0 0-1.756.843l-.25.308a.75.75 0 0 1-1.15 0l-.25-.308A2.25 2.25 0 0 0 5.003 13H.75a.75.75 0 0 1-.75-.75V1.75Z"></path></svg>
-            <span>README.md</span>
+          <div class="hero-sparkle-pill">
+            <span class="sparkle-star">✨</span>
+            <span>Autonomous AI Agent + Grounded Syllabus Intelligence</span>
           </div>
-          <div class="gh-readme-body">
-            <h1 class="hero-title"><span class="gradient-text">SyllabusAI</span> Copilot Engine 🤖</h1>
-            <p class="hero-subtitle">
-              Autonomous AI reasoning engine combined with syllabus-grounded dense retrieval and BM25 lexical rank fusion. Ask anything freely, write algorithms, derive equations, or verify textbook citations.
-            </p>
-            <div class="gh-prompts-grid">
-              <button class="prompt-chip" data-query="Explain Dijkstra's Banker's Algorithm with safe sequence logic and deadlock prevention.">
-                <span class="chip-icon">🔒</span>
-                <div class="chip-text">
-                  <strong>Banker's Algorithm</strong>
-                  <small>Deadlock prevention & safe states</small>
-                </div>
-              </button>
-              <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its time & space complexity.">
-                <span class="chip-icon">💻</span>
-                <div class="chip-text">
-                  <strong>Reverse Linked List</strong>
-                  <small>Python 3-pointer implementation</small>
-                </div>
-              </button>
-              <button class="prompt-chip" data-query="What is the Effective Memory Access Time (EMAT) formula from my notes?">
-                <span class="chip-icon">📐</span>
-                <div class="chip-text">
-                  <strong>EMAT Formula</strong>
-                  <small>TLB hit ratio & access times</small>
-                </div>
-              </button>
-              <button class="prompt-chip" data-query="What is Belady's Anomaly in FIFO page replacement and how does LRU fix it?">
-                <span class="chip-icon">⚡</span>
-                <div class="chip-text">
-                  <strong>Belady's Anomaly</strong>
-                  <small>FIFO vs LRU page replacement</small>
-                </div>
-              </button>
-            </div>
+          <h2 class="hero-title">Master Your Course with <span class="gradient-text">SyllabusAI</span></h2>
+          <p class="hero-subtitle">
+            Ask anything freely, write high-performance code, derive mathematical equations, or explore verified course notes with exact textbook citations.
+          </p>
+          <div class="hero-prompts-grid">
+            <button class="prompt-chip" data-query="Explain how Dijkstra's Banker's Algorithm prevents deadlocks and find safe sequences.">
+              <span class="chip-emoji">🔒</span>
+              <div class="chip-text">
+                <strong>Banker's Algorithm</strong>
+                <small>Deadlock prevention & safe states</small>
+              </div>
+            </button>
+            <button class="prompt-chip" data-query="Write python code to reverse a singly linked list and analyze its complexity.">
+              <span class="chip-emoji">💻</span>
+              <div class="chip-text">
+                <strong>Reverse Linked List</strong>
+                <small>Python 3-pointer implementation</small>
+              </div>
+            </button>
+            <button class="prompt-chip" data-query="What is the Effective Memory Access Time (EMAT) formula from my notes?">
+              <span class="chip-emoji">📐</span>
+              <div class="chip-text">
+                <strong>EMAT Formula</strong>
+                <small>TLB hit ratio & memory access time</small>
+              </div>
+            </button>
+            <button class="prompt-chip" data-query="What is Belady's Anomaly in FIFO page replacement and how does LRU fix it?">
+              <span class="chip-emoji">⚡</span>
+              <div class="chip-text">
+                <strong>Belady's Anomaly</strong>
+                <small>FIFO vs LRU page replacement</small>
+              </div>
+            </button>
           </div>
         </div>
       `;
@@ -864,7 +890,7 @@ class SyllabusApp {
       if (collectedCitations.length > 0) {
         citationsContainer.style.display = 'block';
         citationsContainer.innerHTML = `
-          <div class="citations-title">📌 Verified Syllabus Citations (Click to Inspect Source Diff):</div>
+          <div class="citations-title">📌 Verified Syllabus Citations (Click to Inspect Source):</div>
           ${collectedCitations.map(c => `
             <span class="citation-badge" data-source="${this.escapeHtml(c.source)}" data-page="${c.page}" data-sim="${c.similarity || 0.95}">
               📄 ${this.escapeHtml(c.source)} (Page ${c.page})
@@ -895,7 +921,7 @@ class SyllabusApp {
 
     } catch (err) {
       console.error(err);
-      contentEl.innerHTML = '<span style="color:#f85149;">⚠️ Network error communicating with agent.</span>';
+      contentEl.innerHTML = '<span style="color:#ef4444;">⚠️ Network error communicating with agent.</span>';
     } finally {
       this.isStreaming = false;
       this.scrollToBottom();
@@ -908,8 +934,8 @@ class SyllabusApp {
 
     const bubble = document.createElement('div');
     bubble.className = `message-bubble ${role}-message`;
-    const avatar = role === 'user' ? '👤' : '🤖';
-    const headerTitle = role === 'user' ? '<strong>@you</strong> commented' : `<strong>@syllabus-copilot [bot]</strong> (${this.getPersonaName()}) commented`;
+    const avatar = role === 'user' ? '👤' : (this.currentMode === 'agent' ? '🤖' : '🎓');
+    const headerTitle = role === 'user' ? 'You' : `SyllabusAI (${this.getPersonaName()})`;
 
     bubble.innerHTML = `
       <div class="message-avatar">${avatar}</div>
@@ -918,10 +944,10 @@ class SyllabusApp {
         <div class="message-body">${this.renderMarkdown(content)}${isStreaming ? '<span class="typing-cursor"></span>' : ''}</div>
         <div class="citations-box" style="${citations.length > 0 ? 'display:block;' : 'display:none;'}">
           ${citations.length > 0 ? `
-            <div class="citations-title">📌 Verified Syllabus Citations:</div>
+            <div class="citations-title">📌 Verified Syllabus Citations (Click to Inspect):</div>
             ${citations.map(c => `
               <span class="citation-badge" data-source="${this.escapeHtml(c.source)}" data-page="${c.page}">
-                📄 ${this.escapeHtml(c.source)}:Page ${c.page}
+                📄 ${this.escapeHtml(c.source)} (Page ${c.page})
               </span>
             `).join('')}
           ` : ''}
@@ -932,7 +958,7 @@ class SyllabusApp {
             <button class="quick-action-pill" data-action="quiz">📝 3 Practice Questions</button>
             <button class="quick-action-pill" data-action="flashcard">🃏 Create Flashcard</button>
             <button class="quick-action-pill" data-action="analogy">💡 Real-World Analogy</button>
-            <button class="quick-action-pill" data-action="canvas">🎨 Open in Code Diff</button>
+            <button class="quick-action-pill" data-action="canvas">🎨 Open in Studio</button>
           </div>
         ` : ''}
       </div>
@@ -985,12 +1011,12 @@ class SyllabusApp {
 
   getPersonaName() {
     const names = {
-      general: 'Copilot All-Rounder',
+      general: 'ChatGPT All-Rounder',
       professor: 'Academic Professor',
       socratic: 'Socratic Tutor',
       coding_mentor: 'Code Mentor'
     };
-    return names[this.currentPersona] || 'Copilot Agent';
+    return names[this.currentPersona] || 'AI Agent';
   }
 
   renderMarkdown(text) {
@@ -1040,7 +1066,7 @@ class SyllabusApp {
     const diff = document.getElementById('quiz-difficulty')?.value || 'Medium';
     const qType = document.getElementById('quiz-type')?.value || 'MCQ';
 
-    this.quizContainer.innerHTML = '<div class="gh-blankslate"><div class="blankslate-icon">⏳</div><h3>Generating Assessment Questions...</h3></div>';
+    this.quizContainer.innerHTML = '<div class="empty-state-card"><div class="empty-icon-glow">⏳</div><h3>Generating Assessment Questions...</h3></div>';
     this.quizResults.style.display = 'none';
     this.quizFooter.style.display = 'none';
     this.btnExportWorksheet.style.display = 'none';
@@ -1055,13 +1081,13 @@ class SyllabusApp {
       this.activeQuiz = data.quiz;
       this.renderQuiz(data.quiz, qType);
     } catch {
-      this.quizContainer.innerHTML = '<div class="gh-blankslate"><p style="color:#f85149;">Failed to generate quiz.</p></div>';
+      this.quizContainer.innerHTML = '<div class="empty-state-card"><p style="color:#ef4444;">Failed to generate quiz.</p></div>';
     }
   }
 
   renderQuiz(questions, qType) {
     if (!questions || questions.length === 0) {
-      this.quizContainer.innerHTML = '<div class="gh-blankslate"><p>No questions generated.</p></div>';
+      this.quizContainer.innerHTML = '<div class="empty-state-card"><p>No questions generated.</p></div>';
       return;
     }
 
@@ -1086,7 +1112,7 @@ class SyllabusApp {
       } else {
         optionsHtml = `
           <div class="descriptive-field">
-            <textarea class="gh-input" rows="3" placeholder="Write your derivation or answer here..." style="width:100%;"></textarea>
+            <textarea class="modern-input" rows="3" placeholder="Write your derivation or answer here..." style="width:100%;"></textarea>
           </div>
         `;
       }
@@ -1174,7 +1200,7 @@ class SyllabusApp {
   /* --- FLASHCARDS --- */
   async generateFlashcards() {
     const topic = document.getElementById('flashcard-topic')?.value || 'Core Concepts';
-    this.flashcardsContainer.innerHTML = '<div class="gh-blankslate"><div class="blankslate-icon">⏳</div><h3>Building Flashcard Deck...</h3></div>';
+    this.flashcardsContainer.innerHTML = '<div class="empty-state-card"><div class="empty-icon-glow">⏳</div><h3>Building 3D Flashcard Deck...</h3></div>';
 
     try {
       const res = await fetch('/api/flashcards', {
@@ -1185,7 +1211,7 @@ class SyllabusApp {
       const data = await res.json();
       this.renderFlashcards(data.flashcards);
     } catch {
-      this.flashcardsContainer.innerHTML = '<div class="gh-blankslate"><p>Failed to generate cards.</p></div>';
+      this.flashcardsContainer.innerHTML = '<div class="empty-state-card"><p>Failed to generate cards.</p></div>';
     }
   }
 
@@ -1199,7 +1225,7 @@ class SyllabusApp {
       wrap.innerHTML = `
         <div class="flashcard-inner">
           <div class="flashcard-front">
-            <span class="card-badge">Card #${idx + 1}</span>
+            <span class="card-badge">Card ${idx + 1}</span>
             <h4>${this.escapeHtml(c.front)}</h4>
             <span class="flip-hint">👆 Click to Flip</span>
           </div>
@@ -1249,17 +1275,17 @@ class SyllabusApp {
     URL.revokeObjectURL(url);
   }
 
-  /* --- SYSTEM STATUS & FILE TREE --- */
+  /* --- SYSTEM STATUS & DOCS --- */
   async fetchSystemStatus() {
     try {
       const res = await fetch('/api/status');
       const data = await res.json();
       if (this.docCountBadge) this.docCountBadge.innerText = data.total_documents;
-      if (this.statusDot) this.statusDot.className = 'gh-status-dot online';
-      if (this.statusText) this.statusText.innerText = `RAG Engine Online (${data.total_documents} Files, ${data.total_chunks} Chunks)`;
+      if (this.statusDot) this.statusDot.className = 'status-dot online';
+      if (this.statusText) this.statusText.innerText = `${data.total_documents} Docs (${data.total_chunks} Chunks)`;
 
       if (this.chatDocFilter) {
-        this.chatDocFilter.innerHTML = '<option value="All Documents">All Syllabus Documents (main)</option>';
+        this.chatDocFilter.innerHTML = '<option value="All Documents">All Syllabus Documents</option>';
         data.documents.forEach(d => {
           this.chatDocFilter.innerHTML += `<option value="${d.source}">${d.source}</option>`;
         });
@@ -1267,7 +1293,7 @@ class SyllabusApp {
 
       this.renderDocsTable(data.documents);
     } catch {
-      if (this.statusDot) this.statusDot.className = 'gh-status-dot';
+      if (this.statusDot) this.statusDot.className = 'status-dot';
       if (this.statusText) this.statusText.innerText = 'Engine Offline';
     }
   }
@@ -1275,20 +1301,19 @@ class SyllabusApp {
   renderDocsTable(docs) {
     if (!this.docsTableContainer) return;
     if (!docs || docs.length === 0) {
-      this.docsTableContainer.innerHTML = '<div class="gh-blankslate"><p>No documents indexed yet.</p></div>';
+      this.docsTableContainer.innerHTML = '<div class="empty-state-card"><p>No documents uploaded yet.</p></div>';
       return;
     }
 
-    let html = '<div class="doc-items-list">';
+    let html = '<div class="doc-items-list" style="display:flex; flex-direction:column; gap:10px;">';
     docs.forEach(d => {
       html += `
-        <div class="doc-row">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <svg class="octicon octicon-file" viewBox="0 0 16 16" width="14" height="14" fill="#8b949e"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l3.914 3.914c.329.328.513.773.513 1.237v8.586A1.75 1.75 0 0 1 14.25 16h-10.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 10 4.25V1.5Zm7.75.56v2.19c0 .138.112.25.25.25h2.19L11.5 2.06Z"></path></svg>
-            <strong style="color:var(--accent-fg); font-size:13px;">${this.escapeHtml(d.source)}</strong>
-            <span style="font-size:11px; color:var(--fg-muted); margin-left:8px;">${d.total_pages} Pages | ${d.chunk_count} Chunks | ${d.total_chars} chars</span>
+        <div class="doc-row" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:var(--bg-secondary); border-radius:12px; border:1px solid var(--border-subtle);">
+          <div>
+            <strong style="color:var(--text-main); font-size:13px;">📄 ${this.escapeHtml(d.source)}</strong>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${d.total_pages} Pages | ${d.chunk_count} Chunks | ${d.total_chars} chars</div>
           </div>
-          <button class="gh-btn-danger" onclick="app.deleteDoc('${d.source}')">Delete</button>
+          <button class="danger-glass-btn" onclick="app.deleteDoc('${d.source}')">Delete</button>
         </div>
       `;
     });
@@ -1297,7 +1322,7 @@ class SyllabusApp {
   }
 
   async deleteDoc(sourceName) {
-    if (!confirm(`Remove "${sourceName}" from repository?`)) return;
+    if (!confirm(`Remove "${sourceName}" from syllabus index?`)) return;
     await fetch(`/api/documents/${encodeURIComponent(sourceName)}`, { method: 'DELETE' });
     this.fetchSystemStatus();
   }
@@ -1321,7 +1346,7 @@ class SyllabusApp {
   }
 
   async clearAllDocs() {
-    if (!confirm('Clear all indexed documents in repository?')) return;
+    if (!confirm('Clear all indexed documents?')) return;
     await fetch('/api/clear', { method: 'POST' });
     this.fetchSystemStatus();
   }
