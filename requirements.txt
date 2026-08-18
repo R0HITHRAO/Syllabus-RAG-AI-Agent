@@ -1,6 +1,7 @@
 # Web Application Server & API
 fastapi>=0.110.0
 uvicorn>=0.29.0
+gunicorn>=22.0.0
 python-multipart>=0.0.9
 
 # Streamlit (Alternative UI option)
