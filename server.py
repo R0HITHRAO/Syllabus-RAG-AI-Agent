@@ -14,7 +14,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, HTMLResponse
 from pydantic import BaseModel
 
 from core.config import (
@@ -409,7 +409,11 @@ app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
 async def serve_index():
     index_path = WEB_DIR / "index.html"
     if index_path.exists():
-        return FileResponse(str(index_path))
+        try:
+            return FileResponse(str(index_path), media_type="text/html")
+        except Exception:
+            with open(index_path, "r", encoding="utf-8") as f:
+                return HTMLResponse(content=f.read())
     return JSONResponse(content={"message": "Web UI is ready."})
 
 if __name__ == "__main__":

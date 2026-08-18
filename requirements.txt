@@ -3,6 +3,7 @@ fastapi>=0.110.0
 uvicorn>=0.29.0
 gunicorn>=22.0.0
 python-multipart>=0.0.9
+aiofiles>=23.2.1
 
 # Streamlit (Alternative UI option)
 streamlit>=1.35.0
