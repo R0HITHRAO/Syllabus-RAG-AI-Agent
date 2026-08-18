@@ -16,7 +16,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="/static/css/style.css?v=2.6.0">
+  <link rel="stylesheet" href="/static/css/style.css?v=3.0.0">
 </head>
 <body>
   <div class="ambient-glow-mesh"></div>
@@ -149,7 +149,15 @@
             </button>
             <button class="tab-nav-btn" data-tab="tab-flashcards">
               <span class="tab-icon">⚡</span>
-              <span class="tab-label">Revision & Flashcards</span>
+              <span class="tab-label">Flashcards</span>
+            </button>
+            <button class="tab-nav-btn" data-tab="tab-graph">
+              <span class="tab-icon">🕸️</span>
+              <span class="tab-label">Concept Map</span>
+            </button>
+            <button class="tab-nav-btn" data-tab="tab-analytics">
+              <span class="tab-icon">📈</span>
+              <span class="tab-label">Readiness</span>
             </button>
           </div>
         </nav>
@@ -506,6 +514,153 @@
           </div>
         </section>
 
+        <!-- Tab 6: 🕸️ Interactive Concept Mind-Map -->
+        <section id="tab-graph" class="tab-pane">
+          <div class="graph-stage-layout">
+            <div class="graph-controls-toolbar">
+              <div class="graph-search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="graph-search-input" class="modern-input" placeholder="Search concept or formula (e.g. TLB, Banker's)..." style="width: 280px; padding: 7px 12px; font-size: 13px;">
+              </div>
+
+              <div class="graph-actions-right">
+                <button id="btn-refresh-graph" class="secondary-glass-btn" title="Re-simulate Force Physics">🔄 Re-layout</button>
+                <div class="graph-zoom-group">
+                  <button id="btn-graph-zoom-in" class="icon-btn-sm" title="Zoom In">+</button>
+                  <button id="btn-graph-zoom-out" class="icon-btn-sm" title="Zoom Out">-</button>
+                  <button id="btn-graph-zoom-reset" class="icon-btn-sm" title="Reset View">⊙</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="graph-canvas-container">
+              <canvas id="concept-graph-canvas"></canvas>
+              
+              <!-- Floating Node Detail Inspector Overlay -->
+              <div id="graph-node-card" class="glass-surface node-detail-card" style="display: none;">
+                <div class="node-card-header">
+                  <span id="node-card-group-badge" class="badge-gradient">CONCEPT</span>
+                  <button id="btn-close-node-card" class="icon-btn-sm">&times;</button>
+                </div>
+                <h3 id="node-card-title">Concept Name</h3>
+                <p id="node-card-desc">Description of this concept from the syllabus.</p>
+                <div id="node-card-formula-box" class="node-formula-wrap" style="display:none;">
+                  <strong>Formula:</strong> <code id="node-card-formula"></code>
+                </div>
+                <div class="node-card-actions">
+                  <button id="btn-ask-node-ai" class="primary-gradient-btn glow-btn" style="padding: 6px 12px; font-size: 12px;">💬 Ask AI</button>
+                  <button id="btn-quiz-node-ai" class="secondary-glass-btn" style="padding: 6px 12px; font-size: 12px;">📝 Practice</button>
+                </div>
+              </div>
+
+              <div class="graph-legend-overlay">
+                <span class="legend-item"><span class="legend-dot root"></span> Root</span>
+                <span class="legend-item"><span class="legend-dot chapter"></span> Chapter</span>
+                <span class="legend-item"><span class="legend-dot concept"></span> Concept</span>
+                <span class="legend-item"><span class="legend-dot algorithm"></span> Algorithm</span>
+                <span class="legend-item"><span class="legend-dot formula"></span> Formula</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 7: 📈 Exam Readiness Analytics & Mastery Dashboard -->
+        <section id="tab-analytics" class="tab-pane">
+          <div class="analytics-layout-grid">
+            
+            <!-- Left: Overall Readiness Gauge & KPI Cards -->
+            <div class="analytics-left-pane">
+              
+              <div class="glass-surface readiness-gauge-card">
+                <div class="gauge-title">🎯 Exam Readiness Score</div>
+                <div class="gauge-visual-wrap">
+                  <div class="circular-progress-meter">
+                    <svg viewBox="0 0 160 160" width="160" height="160">
+                      <circle class="meter-bg" cx="80" cy="80" r="68"></circle>
+                      <circle id="gauge-circle-fill" class="meter-fill-stroke" cx="80" cy="80" r="68" stroke-dasharray="427" stroke-dashoffset="64"></circle>
+                    </svg>
+                    <div class="gauge-number-center">
+                      <span id="readiness-pct-display" class="gauge-huge-number">88%</span>
+                      <small id="readiness-tier-badge" class="tier-pill">Exam Ready</small>
+                    </div>
+                  </div>
+                </div>
+                <p class="readiness-desc">Based on course syllabus coverage, quiz accuracy, and concept retrieval depth.</p>
+              </div>
+
+              <!-- Quick Metrics Grid -->
+              <div class="analytics-kpi-grid">
+                <div class="glass-surface kpi-card">
+                  <span class="kpi-icon">🔥</span>
+                  <div class="kpi-data">
+                    <strong id="kpi-streak">4 Days</strong>
+                    <small>Study Streak</small>
+                  </div>
+                </div>
+
+                <div class="glass-surface kpi-card">
+                  <span class="kpi-icon">📝</span>
+                  <div class="kpi-data">
+                    <strong id="kpi-quizzes">8 Quizzes</strong>
+                    <small>Completed Tests</small>
+                  </div>
+                </div>
+
+                <div class="glass-surface kpi-card">
+                  <span class="kpi-icon">🎯</span>
+                  <div class="kpi-data">
+                    <strong id="kpi-accuracy">91%</strong>
+                    <small>Overall Accuracy</small>
+                  </div>
+                </div>
+
+                <div class="glass-surface kpi-card">
+                  <span class="kpi-icon">📚</span>
+                  <div class="kpi-data">
+                    <strong id="kpi-coverage">100%</strong>
+                    <small>Syllabus Indexed</small>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right: Topic Mastery & Diagnostic Weak Spot Recommendations -->
+            <div class="analytics-right-pane">
+              
+              <!-- Topic Mastery Breakdown -->
+              <div class="glass-surface mastery-breakdown-card">
+                <div class="card-title-row">
+                  <h3>📊 Course Topic Mastery Breakdown</h3>
+                  <span class="badge-gradient">SYLLABUS COVERAGE</span>
+                </div>
+
+                <div id="topic-mastery-container" class="mastery-bars-list">
+                  <!-- Injected dynamically -->
+                </div>
+              </div>
+
+              <!-- Weak Spot Diagnostics -->
+              <div class="glass-surface weak-spot-card">
+                <div class="weak-spot-header">
+                  <div class="weak-title-group">
+                    <span class="alert-icon">⚡</span>
+                    <h3>Automated Diagnostic Recommendations</h3>
+                  </div>
+                  <button id="btn-practice-weak-spots" class="primary-gradient-btn glow-btn" style="padding: 6px 14px; font-size: 12px;">
+                    🎯 Practice Weak Areas
+                  </button>
+                </div>
+                <div id="weak-topics-list" class="weak-topics-container">
+                  <!-- Injected dynamically -->
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
       </main>
 
       <!-- 2.3 Split-Screen Studio & Citation Inspector (Right) -->
@@ -635,6 +790,6 @@
   </div>
 
   <!-- App Script -->
-  <script src="/static/js/app.js?v=2.6.0"></script>
+  <script src="/static/js/app.js?v=3.0.0"></script>
 </body>
 </html>

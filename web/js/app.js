@@ -474,6 +474,467 @@ class CanvasStudio {
   }
 }
 
+class ConceptGraphController {
+  constructor(app) {
+    this.app = app;
+    this.canvas = document.getElementById('concept-graph-canvas');
+    this.ctx = this.canvas?.getContext('2d');
+    this.nodes = [];
+    this.links = [];
+    this.selectedNode = null;
+    this.hoveredNode = null;
+    this.draggedNode = null;
+    this.searchTerm = '';
+    this.zoom = 1;
+    this.panX = 0;
+    this.panY = 0;
+    this.isPanning = false;
+    this.lastMouseX = 0;
+    this.lastMouseY = 0;
+    this.animationId = null;
+
+    this.initElements();
+    this.initEvents();
+  }
+
+  initElements() {
+    this.searchInput = document.getElementById('graph-search-input');
+    this.btnRefresh = document.getElementById('btn-refresh-graph');
+    this.btnZoomIn = document.getElementById('btn-graph-zoom-in');
+    this.btnZoomOut = document.getElementById('btn-graph-zoom-out');
+    this.btnZoomReset = document.getElementById('btn-graph-zoom-reset');
+    this.nodeCard = document.getElementById('graph-node-card');
+    this.nodeCardTitle = document.getElementById('node-card-title');
+    this.nodeCardDesc = document.getElementById('node-card-desc');
+    this.nodeCardGroup = document.getElementById('node-card-group-badge');
+    this.nodeFormulaBox = document.getElementById('node-card-formula-box');
+    this.nodeFormula = document.getElementById('node-card-formula');
+    this.btnCloseNodeCard = document.getElementById('btn-close-node-card');
+    this.btnAskNodeAI = document.getElementById('btn-ask-node-ai');
+    this.btnQuizNodeAI = document.getElementById('btn-quiz-node-ai');
+  }
+
+  initEvents() {
+    this.searchInput?.addEventListener('input', (e) => {
+      this.searchTerm = e.target.value.toLowerCase().trim();
+    });
+    this.btnRefresh?.addEventListener('click', () => this.fetchGraphData());
+    this.btnZoomIn?.addEventListener('click', () => this.zoomBy(1.2));
+    this.btnZoomOut?.addEventListener('click', () => this.zoomBy(0.8));
+    this.btnZoomReset?.addEventListener('click', () => this.resetView());
+    this.btnCloseNodeCard?.addEventListener('click', () => this.hideNodeCard());
+
+    this.btnAskNodeAI?.addEventListener('click', () => {
+      if (!this.selectedNode) return;
+      this.app.switchTab('tab-chat');
+      const query = `Explain the syllabus concept "${this.selectedNode.label}" in depth, including its mechanism, practical examples, and exam significance.`;
+      if (this.app.chatInput) this.app.chatInput.value = query;
+      this.app.handleSendMessage();
+    });
+
+    this.btnQuizNodeAI?.addEventListener('click', () => {
+      if (!this.selectedNode) return;
+      this.app.switchTab('tab-exam');
+      const topicInput = document.getElementById('quiz-topic');
+      if (topicInput) topicInput.value = this.selectedNode.label;
+      this.app.generateQuiz();
+    });
+
+    if (this.canvas) {
+      this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+      this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+      this.canvas.addEventListener('mouseup', () => this.onMouseUp());
+      this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
+    }
+  }
+
+  resizeCanvas() {
+    if (!this.canvas || !this.canvas.parentElement) return;
+    const rect = this.canvas.parentElement.getBoundingClientRect();
+    this.canvas.width = rect.width || 800;
+    this.canvas.height = rect.height || 500;
+  }
+
+  async fetchGraphData() {
+    try {
+      this.resizeCanvas();
+      const res = await fetch('/api/graph/data');
+      const data = await res.json();
+      this.loadGraph(data);
+    } catch (e) {
+      console.error('Failed to load graph data:', e);
+    }
+  }
+
+  loadGraph(data) {
+    const width = this.canvas?.width || 800;
+    const height = this.canvas?.height || 500;
+
+    this.nodes = (data.nodes || []).map((n, i) => {
+      const angle = (i / Math.max(1, data.nodes.length)) * Math.PI * 2;
+      const radius = n.group === 'root' ? 0 : (n.group === 'chapter' ? 140 : 230 + (i % 3) * 40);
+      return {
+        ...n,
+        x: width / 2 + Math.cos(angle) * radius,
+        y: height / 2 + Math.sin(angle) * radius,
+        vx: 0,
+        vy: 0
+      };
+    });
+
+    const nodeMap = new Map(this.nodes.map(n => [n.id, n]));
+    this.links = (data.links || []).map(l => ({
+      ...l,
+      sourceNode: nodeMap.get(l.source),
+      targetNode: nodeMap.get(l.target)
+    })).filter(l => l.sourceNode && l.targetNode);
+
+    this.startPhysicsSimulation();
+  }
+
+  startPhysicsSimulation() {
+    if (this.animationId) cancelAnimationFrame(this.animationId);
+
+    const tick = () => {
+      this.updatePhysics();
+      this.render();
+      this.animationId = requestAnimationFrame(tick);
+    };
+
+    this.animationId = requestAnimationFrame(tick);
+  }
+
+  updatePhysics() {
+    const k = 0.04;
+    const rep = 900;
+    const centerAttraction = 0.0018;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+
+    for (let i = 0; i < this.nodes.length; i++) {
+      for (let j = i + 1; j < this.nodes.length; j++) {
+        const n1 = this.nodes[i];
+        const n2 = this.nodes[j];
+        const dx = n2.x - n1.x;
+        const dy = n2.y - n1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        if (dist < 320) {
+          const force = rep / (dist * dist);
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          n1.vx -= fx;
+          n1.vy -= fy;
+          n2.vx += fx;
+          n2.vy += fy;
+        }
+      }
+    }
+
+    for (let link of this.links) {
+      const s = link.sourceNode;
+      const t = link.targetNode;
+      const dx = t.x - s.x;
+      const dy = t.y - s.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const targetDist = link.relationship === 'contains' ? 130 : 95;
+      const force = (dist - targetDist) * k;
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+      s.vx += fx;
+      s.vy += fy;
+      t.vx -= fx;
+      t.vy -= fy;
+    }
+
+    for (let n of this.nodes) {
+      if (n === this.draggedNode) continue;
+      n.vx += (width / 2 - n.x) * centerAttraction;
+      n.vy += (height / 2 - n.y) * centerAttraction;
+      n.vx *= 0.88;
+      n.vy *= 0.88;
+      n.x += n.vx;
+      n.y += n.vy;
+    }
+  }
+
+  render() {
+    if (!this.ctx || !this.canvas) return;
+    const ctx = this.ctx;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+
+    ctx.save();
+    ctx.clearRect(0, 0, width, height);
+
+    ctx.translate(this.panX, this.panY);
+    ctx.scale(this.zoom, this.zoom);
+
+    const groupColors = {
+      root: '#6366f1',
+      chapter: '#8b5cf6',
+      concept: '#06b6d4',
+      algorithm: '#10b981',
+      formula: '#f59e0b',
+      dynamic: '#ec4899'
+    };
+
+    for (let link of this.links) {
+      const s = link.sourceNode;
+      const t = link.targetNode;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      const pTime = (Date.now() * 0.0008) % 1;
+      const px = s.x + (t.x - s.x) * pTime;
+      const py = s.y + (t.y - s.y) * pTime;
+      ctx.beginPath();
+      ctx.arc(px, py, 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fill();
+    }
+
+    for (let n of this.nodes) {
+      const isMatch = !this.searchTerm || n.label.toLowerCase().includes(this.searchTerm);
+      const isSelected = this.selectedNode === n;
+      const isHovered = this.hoveredNode === n;
+      const color = groupColors[n.group] || '#6366f1';
+      const radius = isSelected ? n.size * 1.3 : (isHovered ? n.size * 1.15 : n.size);
+
+      ctx.save();
+      ctx.globalAlpha = isMatch ? 1 : 0.25;
+
+      if (isSelected || isHovered) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, radius + 8, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.35;
+        ctx.fill();
+        ctx.globalAlpha = isMatch ? 1 : 0.25;
+      }
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#090d16';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = isSelected ? 3.5 : 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, radius * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      ctx.font = `${n.group === 'root' ? 'bold 13px' : '11.5px'} 'Plus Jakarta Sans', sans-serif`;
+      ctx.fillStyle = isSelected ? '#ffffff' : (isHovered ? '#38bdf8' : '#e2e8f0');
+      ctx.textAlign = 'center';
+      ctx.fillText(n.label, n.x, n.y + radius + 14);
+
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  onMouseDown(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left - this.panX) / this.zoom;
+    const my = (e.clientY - rect.top - this.panY) / this.zoom;
+
+    for (let n of this.nodes) {
+      const dx = mx - n.x;
+      const dy = my - n.y;
+      if (Math.sqrt(dx * dx + dy * dy) <= n.size + 4) {
+        this.draggedNode = n;
+        this.selectNode(n);
+        return;
+      }
+    }
+
+    this.isPanning = true;
+    this.lastMouseX = e.clientX;
+    this.lastMouseY = e.clientY;
+  }
+
+  onMouseMove(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left - this.panX) / this.zoom;
+    const my = (e.clientY - rect.top - this.panY) / this.zoom;
+
+    if (this.draggedNode) {
+      this.draggedNode.x = mx;
+      this.draggedNode.y = my;
+      this.draggedNode.vx = 0;
+      this.draggedNode.vy = 0;
+      return;
+    }
+
+    if (this.isPanning) {
+      this.panX += e.clientX - this.lastMouseX;
+      this.panY += e.clientY - this.lastMouseY;
+      this.lastMouseX = e.clientX;
+      this.lastMouseY = e.clientY;
+      return;
+    }
+
+    let found = null;
+    for (let n of this.nodes) {
+      const dx = mx - n.x;
+      const dy = my - n.y;
+      if (Math.sqrt(dx * dx + dy * dy) <= n.size + 4) {
+        found = n;
+        break;
+      }
+    }
+    this.hoveredNode = found;
+    this.canvas.style.cursor = found ? 'pointer' : (this.isPanning ? 'grabbing' : 'grab');
+  }
+
+  onMouseUp() {
+    this.draggedNode = null;
+    this.isPanning = false;
+  }
+
+  onWheel(e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    this.zoomBy(factor);
+  }
+
+  zoomBy(factor) {
+    this.zoom = Math.max(0.4, Math.min(2.5, this.zoom * factor));
+  }
+
+  resetView() {
+    this.zoom = 1;
+    this.panX = 0;
+    this.panY = 0;
+  }
+
+  selectNode(node) {
+    this.selectedNode = node;
+    if (!this.nodeCard) return;
+
+    this.nodeCard.style.display = 'block';
+    if (this.nodeCardTitle) this.nodeCardTitle.innerText = node.label;
+    if (this.nodeCardDesc) this.nodeCardDesc.innerText = node.description || 'Core concept extracted from course curriculum.';
+    if (this.nodeCardGroup) this.nodeCardGroup.innerText = (node.group || 'CONCEPT').toUpperCase();
+
+    if (node.formula && this.nodeFormulaBox && this.nodeFormula) {
+      this.nodeFormulaBox.style.display = 'block';
+      this.nodeFormula.innerText = node.formula;
+    } else if (this.nodeFormulaBox) {
+      this.nodeFormulaBox.style.display = 'none';
+    }
+  }
+
+  hideNodeCard() {
+    if (this.nodeCard) this.nodeCard.style.display = 'none';
+    this.selectedNode = null;
+  }
+}
+
+class AnalyticsController {
+  constructor(app) {
+    this.app = app;
+    this.readinessPctDisplay = document.getElementById('readiness-pct-display');
+    this.readinessTierBadge = document.getElementById('readiness-tier-badge');
+    this.gaugeCircleFill = document.getElementById('gauge-circle-fill');
+    this.kpiStreak = document.getElementById('kpi-streak');
+    this.kpiQuizzes = document.getElementById('kpi-quizzes');
+    this.kpiAccuracy = document.getElementById('kpi-accuracy');
+    this.kpiCoverage = document.getElementById('kpi-coverage');
+    this.topicMasteryContainer = document.getElementById('topic-mastery-container');
+    this.weakTopicsList = document.getElementById('weak-topics-list');
+    this.btnPracticeWeakSpots = document.getElementById('btn-practice-weak-spots');
+
+    this.initEvents();
+  }
+
+  initEvents() {
+    this.btnPracticeWeakSpots?.addEventListener('click', () => {
+      this.app.switchTab('tab-exam');
+      const topicInput = document.getElementById('quiz-topic');
+      if (topicInput) topicInput.value = 'CPU Scheduling & Memory Paging';
+      this.app.generateQuiz();
+    });
+  }
+
+  async fetchAnalytics() {
+    try {
+      const res = await fetch('/api/analytics/overview');
+      const data = await res.json();
+      this.renderAnalytics(data);
+    } catch (e) {
+      console.error('Failed to load analytics overview:', e);
+    }
+  }
+
+  renderAnalytics(data) {
+    const score = data.readiness_score || 85;
+    if (this.readinessPctDisplay) this.readinessPctDisplay.innerText = `${score}%`;
+    if (this.readinessTierBadge) this.readinessTierBadge.innerText = data.readiness_tier || 'Exam Ready';
+
+    const offset = Math.round(427 * (1 - score / 100));
+    if (this.gaugeCircleFill) {
+      this.gaugeCircleFill.style.strokeDashoffset = offset;
+    }
+
+    if (this.kpiStreak) this.kpiStreak.innerText = `${data.study_streak_days || 4} Days`;
+    if (this.kpiQuizzes) this.kpiQuizzes.innerText = `${data.total_quizzes_taken || 0} Tests`;
+    if (this.kpiAccuracy) this.kpiAccuracy.innerText = `${data.overall_accuracy || 90}%`;
+
+    if (this.topicMasteryContainer && data.topic_mastery) {
+      this.topicMasteryContainer.innerHTML = '';
+      data.topic_mastery.forEach(tm => {
+        const item = document.createElement('div');
+        item.className = 'mastery-bar-item';
+        item.innerHTML = `
+          <div class="mastery-item-meta">
+            <span>${this.app.escapeHtml(tm.topic)}</span>
+            <strong style="color:${tm.status === 'mastered' ? 'var(--accent-emerald)' : (tm.status === 'moderate' ? 'var(--accent-cyan)' : 'var(--accent-amber)')};">
+              ${tm.mastery_percentage}%
+            </strong>
+          </div>
+          <div class="mastery-progress-track">
+            <div class="mastery-progress-fill ${tm.status}" style="width: ${tm.mastery_percentage}%;"></div>
+          </div>
+        `;
+        this.topicMasteryContainer.appendChild(item);
+      });
+    }
+
+    if (this.weakTopicsList && data.weak_topics) {
+      this.weakTopicsList.innerHTML = '';
+      if (data.weak_topics.length === 0) {
+        this.weakTopicsList.innerHTML = '<p style="color:var(--accent-emerald); font-size:13px;">✅ All topics are currently mastered above 75% accuracy!</p>';
+      } else {
+        data.weak_topics.forEach(wt => {
+          const row = document.createElement('div');
+          row.className = 'weak-topic-row';
+          row.innerHTML = `
+            <div class="weak-topic-info">
+              <strong>${this.app.escapeHtml(wt.topic)} (${wt.score}%)</strong>
+              <small>${this.app.escapeHtml(wt.recommended_action)}</small>
+            </div>
+            <button class="primary-gradient-btn" style="padding: 4px 10px; font-size: 11px;">
+              ⚡ Practice
+            </button>
+          `;
+          row.querySelector('button')?.addEventListener('click', () => {
+            this.app.launchTopicQuiz(wt.topic);
+          });
+          this.weakTopicsList.appendChild(row);
+        });
+      }
+    }
+  }
+}
+
 class SyllabusApp {
   constructor() {
     this.currentMode = 'agent';
@@ -490,6 +951,8 @@ class SyllabusApp {
     this.initElements();
     this.canvas = new CanvasStudio(this);
     this.podcast = new AudioPodcastController(this);
+    this.graph = new ConceptGraphController(this);
+    this.analytics = new AnalyticsController(this);
     this.initTheme();
     this.initEventListeners();
     this.initVoiceInput();
@@ -723,6 +1186,20 @@ class SyllabusApp {
   switchTab(tabId) {
     this.tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
     this.tabPanes.forEach(p => p.classList.toggle('active', p.id === tabId));
+    if (tabId === 'tab-graph') {
+      this.graph?.resizeCanvas();
+      this.graph?.fetchGraphData();
+    }
+    if (tabId === 'tab-analytics') {
+      this.analytics?.fetchAnalytics();
+    }
+  }
+
+  launchTopicQuiz(topic) {
+    this.switchTab('tab-exam');
+    const topicInput = document.getElementById('quiz-topic');
+    if (topicInput) topicInput.value = topic;
+    this.generateQuiz();
   }
 
   initVoiceInput() {

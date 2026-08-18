@@ -27,11 +27,13 @@ from core.agent_engine import AIAgentEngine
 from core.quiz_generator import QuizGenerator
 from core.syllabus_analyzer import SyllabusAnalyzer
 from core.audio_podcast import AudioPodcastGenerator
+from core.knowledge_graph import KnowledgeGraphGenerator
+from core.analytics import AnalyticsEngine
 
 app = FastAPI(
     title="SyllabusRAG & ChatGPT AI Agent Platform",
     description="ChatGPT-Style Autonomous AI Agent & Grounded Exam Preparation Platform",
-    version="2.2.0"
+    version="2.5.0"
 )
 
 # Enable CORS
@@ -56,6 +58,8 @@ agent_engine = AIAgentEngine(vector_store)
 quiz_gen = QuizGenerator(vector_store)
 analyzer = SyllabusAnalyzer(vector_store)
 podcast_gen = AudioPodcastGenerator(vector_store)
+graph_gen = KnowledgeGraphGenerator(vector_store)
+analytics_engine = AnalyticsEngine(vector_store)
 
 # Preload sample data if empty
 sample_file = SAMPLE_DATA_DIR / "operating_systems_sample.txt"
@@ -262,6 +266,17 @@ async def generate_quiz(req: QuizGenerateRequest):
 @app.post("/api/quiz/submit")
 async def submit_quiz(req: QuizSubmitRequest):
     result = quiz_gen.grade_mcq_submission(req.quiz, req.user_answers)
+    # Record to analytics engine
+    topic = "General Assessment"
+    if len(req.quiz) > 0 and req.quiz[0].get("source"):
+        topic = req.quiz[0].get("source")
+    analytics_engine.record_quiz_result(
+        topic=topic,
+        score_pct=result.get("score_percentage", 0),
+        correct=result.get("correct_count", 0),
+        total=result.get("total_questions", 0),
+        grade=result.get("grade", "C")
+    )
     return result
 
 @app.post("/api/quiz/export")
@@ -369,9 +384,17 @@ async def execute_code(req: CodeRunRequest):
         except Exception:
             pass
         return {"success": True, "output": "Executed via Browser JS Runtime", "client_eval": True}
-        
     else:
         return {"success": False, "output": f"Language '{lang}' execution not supported.", "execution_time_ms": 0}
+
+@app.get("/api/graph/data")
+async def get_concept_graph(filter_source: Optional[str] = None):
+    filter_val = None if filter_source in ["All Documents", "", None] else filter_source
+    return graph_gen.build_graph(filter_source=filter_val)
+
+@app.get("/api/analytics/overview")
+async def get_analytics_overview():
+    return analytics_engine.get_readiness_summary()
 
 # ---------------------------------------------------------
 # Static Website Mounting

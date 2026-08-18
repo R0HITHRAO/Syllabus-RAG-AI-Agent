@@ -1888,3 +1888,339 @@ code, pre, .mono, kbd {
   padding: 24px;
 }
 .modal-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+
+/* --- 13. CONCEPT MIND-MAP & KNOWLEDGE GRAPH --- */
+.graph-stage-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px 24px 20px 24px;
+  gap: 14px;
+}
+
+.graph-controls-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-glass);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 8px 16px;
+}
+
+.graph-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.search-icon { font-size: 14px; color: var(--text-muted); }
+
+.graph-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.graph-zoom-group {
+  display: flex;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.icon-btn-sm {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+.icon-btn-sm:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-main);
+}
+
+.graph-canvas-container {
+  flex: 1;
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 50%, #0d111d 0%, #06070b 100%);
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+#concept-graph-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+}
+#concept-graph-canvas:active {
+  cursor: grabbing;
+}
+
+.node-detail-card {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 300px;
+  padding: 18px;
+  z-index: 30;
+  animation: tabFadeSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.node-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+#node-card-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: var(--text-main);
+}
+
+#node-card-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.node-formula-wrap {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  margin-bottom: 12px;
+}
+.node-formula-wrap code {
+  color: var(--accent-cyan);
+}
+
+.node-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.graph-legend-overlay {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(13, 15, 23, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.legend-dot.root { background: #6366f1; }
+.legend-dot.chapter { background: #8b5cf6; }
+.legend-dot.concept { background: #06b6d4; }
+.legend-dot.algorithm { background: #10b981; }
+.legend-dot.formula { background: #f59e0b; }
+
+/* --- 14. EXAM READINESS ANALYTICS DASHBOARD --- */
+.analytics-layout-grid {
+  display: flex;
+  gap: 24px;
+  padding: 28px;
+  max-width: 1120px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.analytics-left-pane { width: 340px; display: flex; flex-direction: column; gap: 20px; }
+.analytics-right-pane { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+.readiness-gauge-card {
+  padding: 24px;
+  text-align: center;
+}
+
+.gauge-title {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.gauge-visual-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.circular-progress-meter {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+
+.circular-progress-meter svg {
+  transform: rotate(-90deg);
+}
+
+.meter-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 12;
+}
+
+.meter-fill-stroke {
+  fill: none;
+  stroke: url(#brandGradient);
+  stroke: var(--accent-primary);
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gauge-number-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.gauge-huge-number {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+}
+
+.tier-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  margin-top: 2px;
+}
+
+.readiness-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.kpi-card {
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.kpi-icon { font-size: 24px; }
+.kpi-data strong { display: block; font-size: 15px; font-weight: 800; }
+.kpi-data small { display: block; font-size: 11px; color: var(--text-muted); }
+
+.mastery-breakdown-card {
+  padding: 24px;
+}
+
+.mastery-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.mastery-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mastery-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mastery-progress-track {
+  height: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mastery-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mastery-progress-fill.mastered { background: var(--gradient-brand); }
+.mastery-progress-fill.moderate { background: linear-gradient(90deg, #f59e0b, #38bdf8); }
+.mastery-progress-fill.weak { background: linear-gradient(90deg, #ef4444, #f59e0b); }
+
+.weak-spot-card {
+  padding: 20px 24px;
+}
+
+.weak-spot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.weak-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.weak-title-group h3 { font-size: 15px; font-weight: 800; }
+.alert-icon { font-size: 18px; color: var(--accent-amber); }
+
+.weak-topics-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.weak-topic-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+}
+.weak-topic-info strong { display: block; font-size: 13px; color: var(--text-main); }
+.weak-topic-info small { display: block; font-size: 11px; color: var(--accent-amber); }
+
