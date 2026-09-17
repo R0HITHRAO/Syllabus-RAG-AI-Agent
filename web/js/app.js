@@ -1193,6 +1193,10 @@ class SyllabusApp {
     if (tabId === 'tab-analytics') {
       this.analytics?.fetchAnalytics();
     }
+    /* Trigger 3D camera glide if scene is loaded */
+    if (window.__SyllabusAI_3D?.scene) {
+      window.__SyllabusAI_3D.scene.goToTab(tabId);
+    }
   }
 
   launchTopicQuiz(topic) {
@@ -1860,4 +1864,13 @@ class SyllabusApp {
 let app;
 window.addEventListener('DOMContentLoaded', () => {
   app = new SyllabusApp();
+  /* Boot 3D scene after app is ready (three-scene.js loaded after this script) */
+  requestAnimationFrame(() => {
+    if (typeof window.init3DScene === 'function') {
+      window.init3DScene(app);
+    } else {
+      /* three-scene.js may load slightly later — wait for it */
+      window.__pendingInit3D = app;
+    }
+  });
 });

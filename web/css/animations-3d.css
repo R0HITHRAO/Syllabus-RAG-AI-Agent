@@ -1,0 +1,365 @@
+/* ==========================================================================
+   SyllabusAI — 3D Animation Layer
+   Three.js Canvas, 3D Slide Transitions, Card Tilt Glare & Scroll FX
+   ========================================================================== */
+
+/* ── Three.js Canvas Container ─────────────────────────────────────────── */
+#three-canvas-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+#three-canvas-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── 3D Glare Overlay on Cards ──────────────────────────────────────────── */
+.card-3d-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+/* ── Tab Slider Pill ────────────────────────────────────────────────────── */
+.tabs-nav-bar {
+  position: relative; /* pill is positioned relative to bar */
+}
+
+.tab-slider-pill {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  height: calc(100% - 8px);
+  background: linear-gradient(135deg, rgba(99,102,241,0.35) 0%, rgba(139,92,246,0.35) 100%);
+  border-radius: 999px;
+  border: 1px solid rgba(99,102,241,0.5);
+  box-shadow:
+    0 0 20px rgba(99,102,241,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+  pointer-events: none;
+  z-index: 0;
+  transition: left 0.4s cubic-bezier(0.34,1.56,0.64,1), width 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  backdrop-filter: blur(12px);
+}
+
+/* Ensure tab buttons sit above pill */
+.tab-nav-btn {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── 3D Directional Slide Keyframes ─────────────────────────────────────── */
+
+/* Enter from right (forward navigation) */
+@keyframes slideEnterRight {
+  0% {
+    opacity: 0;
+    transform: translate3d(60px, 0, -100px) rotateY(-12deg) scale(0.94);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* Enter from left (backward navigation) */
+@keyframes slideEnterLeft {
+  0% {
+    opacity: 0;
+    transform: translate3d(-60px, 0, -100px) rotateY(12deg) scale(0.94);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* Exit to left */
+@keyframes slideExitLeft {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-60px, 0, -100px) rotateY(12deg) scale(0.94);
+    filter: blur(4px);
+  }
+}
+
+/* Exit to right */
+@keyframes slideExitRight {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(60px, 0, -100px) rotateY(-12deg) scale(0.94);
+    filter: blur(4px);
+  }
+}
+
+/* ── Tab Pane 3D Stage ───────────────────────────────────────────────────── */
+.tab-pane {
+  perspective: 1400px;
+  perspective-origin: 50% 50%;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.tab-pane.slide-enter-right {
+  display: flex;
+  flex-direction: column;
+  animation: slideEnterRight 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tab-pane.slide-enter-left {
+  display: flex;
+  flex-direction: column;
+  animation: slideEnterLeft 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tab-pane.slide-exit-left {
+  display: flex;
+  flex-direction: column;
+  animation: slideExitLeft 0.38s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  pointer-events: none;
+}
+
+.tab-pane.slide-exit-right {
+  display: flex;
+  flex-direction: column;
+  animation: slideExitRight 0.38s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  pointer-events: none;
+}
+
+/* ── Staggered Child Cascade Animations ─────────────────────────────────── */
+@keyframes cascadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tab-pane.active .glass-surface,
+.tab-pane.slide-enter-right .glass-surface,
+.tab-pane.slide-enter-left .glass-surface {
+  animation: cascadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tab-pane.active .glass-surface:nth-child(1),
+.tab-pane.slide-enter-right .glass-surface:nth-child(1),
+.tab-pane.slide-enter-left .glass-surface:nth-child(1) { animation-delay: 0.06s; }
+.tab-pane.active .glass-surface:nth-child(2),
+.tab-pane.slide-enter-right .glass-surface:nth-child(2),
+.tab-pane.slide-enter-left .glass-surface:nth-child(2) { animation-delay: 0.12s; }
+.tab-pane.active .glass-surface:nth-child(3),
+.tab-pane.slide-enter-right .glass-surface:nth-child(3),
+.tab-pane.slide-enter-left .glass-surface:nth-child(3) { animation-delay: 0.18s; }
+
+/* ── 3D Sidebar Slide Physics ────────────────────────────────────────────── */
+@keyframes sidebarSweepIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1000px) translateX(-100%) rotateY(-18deg);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1000px) translateX(0) rotateY(0deg);
+    filter: blur(0px);
+  }
+}
+
+@keyframes sidebarSweepOut {
+  0% {
+    opacity: 1;
+    transform: perspective(1000px) translateX(0) rotateY(0deg);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1000px) translateX(-100%) rotateY(-18deg);
+    filter: blur(6px);
+  }
+}
+
+.chat-sidebar:not(.collapsed) {
+  animation: sidebarSweepIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Right Canvas Studio 3D Drawer ───────────────────────────────────────── */
+@keyframes studioPullOut {
+  0% {
+    opacity: 0;
+    transform: perspective(1000px) translateX(100%) rotateY(18deg);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1000px) translateX(0) rotateY(0deg);
+    filter: blur(0px);
+  }
+}
+
+.canvas-studio:not(.collapsed) {
+  animation: studioPullOut 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Scroll Reveal Animation ─────────────────────────────────────────────── */
+@keyframes revealUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.scroll-reveal {
+  animation: revealUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Neon Hover Borders on Interaction ───────────────────────────────────── */
+.glass-surface {
+  transition:
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s ease,
+    border-color 0.3s ease !important;
+}
+.glass-surface:hover {
+  border-color: rgba(99, 102, 241, 0.38) !important;
+  box-shadow: var(--card-shadow), 0 0 0 1px rgba(99, 102, 241, 0.2), 0 0 40px rgba(99, 102, 241, 0.12) !important;
+}
+
+/* ── Enhanced Glow Pulsing on Active Elements ────────────────────────────── */
+@keyframes neonPulse {
+  0%, 100% { box-shadow: 0 0 18px rgba(99,102,241,0.45), 0 0 4px rgba(99,102,241,0.3); }
+  50%       { box-shadow: 0 0 36px rgba(99,102,241,0.7), 0 0 10px rgba(99,102,241,0.5); }
+}
+
+.tab-nav-btn.active {
+  animation: neonPulse 3s ease-in-out infinite;
+}
+
+/* ── Header Glass Enhancement ────────────────────────────────────────────── */
+.app-header {
+  background: rgba(6, 7, 10, 0.72) !important;
+  backdrop-filter: blur(40px) saturate(220%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(220%) !important;
+  border-bottom: 1px solid rgba(99,102,241,0.18) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06), 0 4px 32px rgba(0,0,0,0.5) !important;
+}
+
+/* ── Holographic Gradient Text Sweep ─────────────────────────────────────── */
+@keyframes holographicShift {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4, #10b981, #6366f1);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: holographicShift 5s ease infinite;
+}
+
+/* ── Brand Logo 3D Rotate ─────────────────────────────────────────────────── */
+@keyframes logoSpin {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+.brand:hover .brand-logo {
+  animation: logoSpin 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  transform: none !important;
+}
+
+/* ── Flashcard 3D Flip Enhancement ───────────────────────────────────────── */
+.flashcard-card {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+.flashcard-card:hover {
+  transform: perspective(1000px) rotateY(3deg) scale(1.02) !important;
+}
+
+/* ── Prompt Chip 3D Lift ──────────────────────────────────────────────────── */
+.prompt-chip {
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s ease !important;
+}
+.prompt-chip:hover {
+  transform: translateY(-4px) scale(1.02) !important;
+  box-shadow: 0 12px 40px rgba(99,102,241,0.35), 0 0 0 1px rgba(99,102,241,0.3) !important;
+}
+
+/* ── Ambient Glow Mesh Upgrade ───────────────────────────────────────────── */
+.ambient-glow-mesh {
+  opacity: 0.6 !important;
+  animation: meshDrift 20s ease-in-out infinite alternate;
+}
+
+@keyframes meshDrift {
+  0%   { transform: scale(1.0) rotate(0deg); }
+  100% { transform: scale(1.08) rotate(3deg); }
+}
+
+/* ── Button Hover 3D Lift ─────────────────────────────────────────────────── */
+.glow-btn {
+  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease !important;
+}
+.glow-btn:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+  box-shadow: 0 8px 30px rgba(99,102,241,0.55) !important;
+}
+.glow-btn:active {
+  transform: translateY(0) scale(0.97) !important;
+}
+
+/* ── Scrollbar 3D Theme ───────────────────────────────────────────────────── */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99,102,241,0.35), rgba(139,92,246,0.35)) !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(99,102,241,0.6), rgba(139,92,246,0.6)) !important;
+}
+
+/* ── Status Dot Neon Pulse ────────────────────────────────────────────────── */
+@keyframes statusPulse {
+  0%, 100% { box-shadow: 0 0 6px var(--accent-emerald), 0 0 0 0 rgba(16,185,129,0.4); }
+  50%       { box-shadow: 0 0 12px var(--accent-emerald), 0 0 0 6px rgba(16,185,129,0); }
+}
+.status-dot.online {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* ── KPI Cards Stagger ────────────────────────────────────────────────────── */
+.kpi-card {
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s ease !important;
+}
+.kpi-card:hover {
+  transform: translateY(-6px) scale(1.04) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.25) !important;
+}

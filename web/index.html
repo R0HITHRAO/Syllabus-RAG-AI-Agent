@@ -15,10 +15,18 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
+  <!-- Three.js WebGL 3D Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="/static/css/style.css?v=4.5.0">
+  <!-- 3D Animations & Slide Transitions -->
+  <link rel="stylesheet" href="/static/css/animations-3d.css?v=1.0.0">
 </head>
 <body>
+  <!-- Three.js WebGL Background Canvas -->
+  <div id="three-canvas-container" class="three-canvas-container"></div>
+
   <div class="ambient-glow-mesh"></div>
 
   <div class="app-container">
@@ -129,6 +137,8 @@
         <!-- Apple-Style Segmented Navigation Tabs -->
         <nav class="tabs-nav-container">
           <div class="tabs-nav-bar">
+            <!-- Animated slider pill -->
+            <div class="tab-slider-pill"></div>
             <button class="tab-nav-btn active" data-tab="tab-chat">
               <span class="tab-icon">💬</span>
               <span class="tab-label">AI Agent Chat</span>
@@ -791,5 +801,7 @@
 
   <!-- App Script -->
   <script src="/static/js/app.js?v=4.5.0"></script>
+  <!-- 3D Scene Controller -->
+  <script src="/static/js/three-scene.js?v=1.0.0"></script>
 </body>
 </html>
