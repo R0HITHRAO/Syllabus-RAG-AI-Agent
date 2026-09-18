@@ -159,7 +159,7 @@ class QuizGenerator:
         return ""
 
     def _clean_and_parse_json(self, text: str) -> Optional[List[Dict[str, Any]]]:
-        """Safely parse JSON array even if enclosed in markdown code blocks."""
+        """Safely parse JSON array even if enclosed in markdown code blocks or wrapped in an object."""
         if not text:
             return None
         # Remove code blocks if present
@@ -167,18 +167,30 @@ class QuizGenerator:
         cleaned = re.sub(r'^```\s*', '', cleaned, flags=re.MULTILINE)
         cleaned = cleaned.strip()
 
-        # Find starting [ and ending ]
-        start = cleaned.find('[')
-        end = cleaned.rfind(']')
-        if start != -1 and end != -1 and end > start:
-            cleaned = cleaned[start:end + 1]
-
+        # Try to parse the full JSON
         try:
             data = json.loads(cleaned)
             if isinstance(data, list):
                 return data
+            # Handle {"questions": [...]} or {"quiz": [...]} wrapper patterns
+            if isinstance(data, dict):
+                for key in ["questions", "quiz", "mcqs", "items", "results"]:
+                    if key in data and isinstance(data[key], list):
+                        return data[key]
         except Exception:
             pass
+
+        # Fallback: extract the first JSON array found
+        start = cleaned.find('[')
+        end = cleaned.rfind(']')
+        if start != -1 and end != -1 and end > start:
+            try:
+                data = json.loads(cleaned[start:end + 1])
+                if isinstance(data, list):
+                    return data
+            except Exception:
+                pass
+
         return None
 
     def _generate_fallback_mcqs(self, chunks: List[Dict[str, Any]], num_questions: int, topic: str) -> List[Dict[str, Any]]:

@@ -492,6 +492,7 @@ class ConceptGraphController {
     this.lastMouseX = 0;
     this.lastMouseY = 0;
     this.animationId = null;
+    this._tick = 0;
 
     this.initElements();
     this.initEvents();
@@ -578,7 +579,9 @@ class ConceptGraphController {
         x: width / 2 + Math.cos(angle) * radius,
         y: height / 2 + Math.sin(angle) * radius,
         vx: 0,
-        vy: 0
+        vy: 0,
+        birthTick: this._tick,
+        pulseOffset: Math.random() * Math.PI * 2,
       };
     });
 
@@ -586,7 +589,8 @@ class ConceptGraphController {
     this.links = (data.links || []).map(l => ({
       ...l,
       sourceNode: nodeMap.get(l.source),
-      targetNode: nodeMap.get(l.target)
+      targetNode: nodeMap.get(l.target),
+      particles: Array.from({ length: 3 }, (_, i) => ({ t: i / 3, speed: 0.003 + Math.random() * 0.004 })),
     })).filter(l => l.sourceNode && l.targetNode);
 
     this.startPhysicsSimulation();
@@ -596,6 +600,7 @@ class ConceptGraphController {
     if (this.animationId) cancelAnimationFrame(this.animationId);
 
     const tick = () => {
+      this._tick++;
       this.updatePhysics();
       this.render();
       this.animationId = requestAnimationFrame(tick);
@@ -655,6 +660,13 @@ class ConceptGraphController {
       n.x += n.vx;
       n.y += n.vy;
     }
+
+    for (let link of this.links) {
+      if (!link.particles) continue;
+      for (let p of link.particles) {
+        p.t = (p.t + p.speed) % 1;
+      }
+    }
   }
 
   render() {
@@ -662,81 +674,249 @@ class ConceptGraphController {
     const ctx = this.ctx;
     const width = this.canvas.width;
     const height = this.canvas.height;
+    const now = Date.now();
 
     ctx.save();
     ctx.clearRect(0, 0, width, height);
 
+    /* Deep space background */
+    const bgGrad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.7);
+    bgGrad.addColorStop(0, 'rgba(15,18,40,0.97)');
+    bgGrad.addColorStop(0.6, 'rgba(8,10,22,0.98)');
+    bgGrad.addColorStop(1, 'rgba(3,4,10,1)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    /* Subtle grid */
+    this._drawGrid(ctx, width, height);
+
     ctx.translate(this.panX, this.panY);
     ctx.scale(this.zoom, this.zoom);
 
-    const groupColors = {
-      root: '#6366f1',
-      chapter: '#8b5cf6',
-      concept: '#06b6d4',
-      algorithm: '#10b981',
-      formula: '#f59e0b',
-      dynamic: '#ec4899'
+    const palette = {
+      root:      { core: '#6366f1', glow: 'rgba(99,102,241,'  },
+      chapter:   { core: '#8b5cf6', glow: 'rgba(139,92,246,'  },
+      concept:   { core: '#06b6d4', glow: 'rgba(6,182,212,'   },
+      algorithm: { core: '#10b981', glow: 'rgba(16,185,129,'  },
+      formula:   { core: '#f59e0b', glow: 'rgba(245,158,11,'  },
+      dynamic:   { core: '#ec4899', glow: 'rgba(236,72,153,'  },
     };
+    const getP = (group) => palette[group] || palette.concept;
 
+    /* Pass 1: glowing beams */
     for (let link of this.links) {
-      const s = link.sourceNode;
-      const t = link.targetNode;
-      ctx.beginPath();
-      ctx.moveTo(s.x, s.y);
-      ctx.lineTo(t.x, t.y);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      this._drawNeonEdge(ctx, link, now, getP);
+    }
+    /* Pass 2: data-stream particles */
+    for (let link of this.links) {
+      this._drawEdgeParticles(ctx, link, getP);
+    }
+    /* Pass 3: nodes (selected/hovered on top) */
+    const sorted = [...this.nodes].sort((a, b) => {
+      const sa = (a === this.selectedNode ? 2 : a === this.hoveredNode ? 1 : 0);
+      const sb = (b === this.selectedNode ? 2 : b === this.hoveredNode ? 1 : 0);
+      return sa - sb;
+    });
+    for (let n of sorted) {
+      this._drawNeonNode(ctx, n, now, getP);
+    }
 
-      const pTime = (Date.now() * 0.0008) % 1;
-      const px = s.x + (t.x - s.x) * pTime;
-      const py = s.y + (t.y - s.y) * pTime;
+    ctx.restore();
+  }
+
+  _drawGrid(ctx, width, height) {
+    const step = 48;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(99,102,241,0.055)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < width; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+    }
+    for (let y = 0; y < height; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  _drawNeonEdge(ctx, link, now, getP) {
+    const s = link.sourceNode;
+    const t = link.targetNode;
+    if (!s || !t) return;
+    const srcP = getP(s.group);
+    const dstP = getP(t.group);
+    const isMatch = !this.searchTerm ||
+      s.label.toLowerCase().includes(this.searchTerm) ||
+      t.label.toLowerCase().includes(this.searchTerm);
+
+    ctx.save();
+    ctx.globalAlpha = isMatch ? 1 : 0.08;
+
+    /* Glow bloom */
+    const grad = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
+    grad.addColorStop(0, srcP.glow + '0.55)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.12)');
+    grad.addColorStop(1, dstP.glow + '0.55)');
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(t.x, t.y);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 4;
+    ctx.filter = 'blur(3px)';
+    ctx.stroke();
+
+    /* Sharp core */
+    ctx.filter = 'none';
+    const grad2 = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
+    grad2.addColorStop(0, srcP.glow + '0.85)');
+    grad2.addColorStop(1, dstP.glow + '0.85)');
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(t.x, t.y);
+    ctx.strokeStyle = grad2;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  _drawEdgeParticles(ctx, link, getP) {
+    const s = link.sourceNode;
+    const t = link.targetNode;
+    if (!s || !t || !link.particles) return;
+    const isMatch = !this.searchTerm ||
+      s.label.toLowerCase().includes(this.searchTerm) ||
+      t.label.toLowerCase().includes(this.searchTerm);
+
+    ctx.save();
+    ctx.globalAlpha = isMatch ? 1 : 0.05;
+    for (let p of link.particles) {
+      const px = s.x + (t.x - s.x) * p.t;
+      const py = s.y + (t.y - s.y) * p.t;
+      const color = getP(s.group).core;
+      const halo = ctx.createRadialGradient(px, py, 0, px, py, 7);
+      halo.addColorStop(0, color);
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.beginPath();
-      ctx.arc(px, py, 2, 0, Math.PI * 2);
-      ctx.fillStyle = '#38bdf8';
+      ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.fillStyle = halo;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  _drawNeonNode(ctx, n, now, getP) {
+    const isMatch    = !this.searchTerm || n.label.toLowerCase().includes(this.searchTerm);
+    const isSelected = this.selectedNode === n;
+    const isHovered  = this.hoveredNode  === n;
+    const p = getP(n.group);
+
+    const baseR  = n.size || 14;
+    const pulse  = Math.sin(now * 0.002 + n.pulseOffset) * 0.12 + 1;
+    const radius = baseR * (isSelected ? 1.35 : isHovered ? 1.18 : 1) * (isSelected || isHovered ? pulse : 1);
+    const age    = this._tick - (n.birthTick || 0);
+    const spawnScale = age < 30 ? age / 30 : 1;
+
+    ctx.save();
+    ctx.globalAlpha = isMatch ? 1 : 0.1;
+    ctx.translate(n.x, n.y);
+    ctx.scale(spawnScale, spawnScale);
+
+    /* Corona */
+    if (isSelected || isHovered || n.group === 'root') {
+      const coronaR = radius + (isSelected ? 28 : 16);
+      const corona = ctx.createRadialGradient(0, 0, radius, 0, 0, coronaR);
+      corona.addColorStop(0, p.glow + '0.4)');
+      corona.addColorStop(1, p.glow + '0)');
+      ctx.beginPath();
+      ctx.arc(0, 0, coronaR, 0, Math.PI * 2);
+      ctx.fillStyle = corona;
       ctx.fill();
     }
 
-    for (let n of this.nodes) {
-      const isMatch = !this.searchTerm || n.label.toLowerCase().includes(this.searchTerm);
-      const isSelected = this.selectedNode === n;
-      const isHovered = this.hoveredNode === n;
-      const color = groupColors[n.group] || '#6366f1';
-      const radius = isSelected ? n.size * 1.3 : (isHovered ? n.size * 1.15 : n.size);
-
-      ctx.save();
-      ctx.globalAlpha = isMatch ? 1 : 0.25;
-
-      if (isSelected || isHovered) {
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, radius + 8, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.35;
-        ctx.fill();
-        ctx.globalAlpha = isMatch ? 1 : 0.25;
-      }
-
+    /* Animated outer ring */
+    if (isSelected || n.group === 'root' || n.group === 'chapter') {
+      const ringT = (now * 0.001 + n.pulseOffset) % (Math.PI * 2);
+      const ringOpacity = (Math.sin(ringT) * 0.3 + 0.5);
       ctx.beginPath();
-      ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = '#090d16';
-      ctx.fill();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = isSelected ? 3.5 : 2;
+      ctx.arc(0, 0, radius + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = p.glow + ringOpacity + ')';
+      ctx.lineWidth = isSelected ? 3 : 1.5;
+      ctx.filter = 'blur(2px)';
       ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, radius * 0.42, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      ctx.font = `${n.group === 'root' ? 'bold 13px' : '11.5px'} 'Plus Jakarta Sans', sans-serif`;
-      ctx.fillStyle = isSelected ? '#ffffff' : (isHovered ? '#38bdf8' : '#e2e8f0');
-      ctx.textAlign = 'center';
-      ctx.fillText(n.label, n.x, n.y + radius + 14);
-
-      ctx.restore();
+      ctx.filter = 'none';
     }
 
+    /* Body sphere */
+    const bodyGrad = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, 0, 0, 0, radius);
+    bodyGrad.addColorStop(0, p.core + 'cc');
+    bodyGrad.addColorStop(0.45, p.core + '66');
+    bodyGrad.addColorStop(1, 'rgba(4,5,15,0.95)');
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+
+    /* Glowing border */
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = p.core;
+    ctx.lineWidth = isSelected ? 2.5 : (isHovered ? 2 : 1.2);
+    ctx.shadowColor = p.core;
+    ctx.shadowBlur = isSelected ? 24 : (isHovered ? 16 : 8);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    /* Specular highlight */
+    const spec = ctx.createRadialGradient(-radius * 0.28, -radius * 0.28, 0, 0, 0, radius * 0.6);
+    spec.addColorStop(0, 'rgba(255,255,255,0.38)');
+    spec.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.6, 0, Math.PI * 2);
+    ctx.fillStyle = spec;
+    ctx.fill();
+
+    /* Center dot */
+    const dotR = radius * 0.28;
+    const dotGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, dotR);
+    dotGlow.addColorStop(0, '#ffffff');
+    dotGlow.addColorStop(0.6, p.core);
+    dotGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath();
+    ctx.arc(0, 0, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = dotGlow;
+    ctx.fill();
+
+    ctx.restore();
+
+    /* Label pill (drawn in world-space, no node transform) */
+    ctx.save();
+    ctx.globalAlpha = isMatch ? 1 : 0.1;
+    const labelY   = n.y + radius * spawnScale + 18;
+    const fontSize = n.group === 'root' ? 13 : (n.group === 'chapter' ? 12 : 11);
+    const fontW    = n.group === 'root' ? '700' : (isSelected ? '700' : '500');
+    ctx.font = `${fontW} ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
+    const labelW = ctx.measureText(n.label).width;
+    const padX = 8, padY = 5;
+
+    ctx.fillStyle = isSelected ? p.glow + '0.75)' : isHovered ? p.glow + '0.5)' : 'rgba(6,7,15,0.78)';
+    ctx.beginPath();
+    ctx.roundRect(n.x - labelW / 2 - padX, labelY - fontSize - padY, labelW + padX * 2, fontSize + padY * 2, 6);
+    ctx.fill();
+
+    ctx.strokeStyle = isSelected ? p.core : isHovered ? p.glow + '0.6)' : 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = isSelected ? '#ffffff' : (isHovered ? p.core : '#cbd5e1');
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    if (isSelected) { ctx.shadowColor = p.core; ctx.shadowBlur = 12; }
+    ctx.fillText(n.label, n.x, labelY);
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
 
@@ -748,7 +928,7 @@ class ConceptGraphController {
     for (let n of this.nodes) {
       const dx = mx - n.x;
       const dy = my - n.y;
-      if (Math.sqrt(dx * dx + dy * dy) <= n.size + 4) {
+      if (Math.sqrt(dx * dx + dy * dy) <= (n.size || 14) + 4) {
         this.draggedNode = n;
         this.selectNode(n);
         return;
@@ -785,7 +965,7 @@ class ConceptGraphController {
     for (let n of this.nodes) {
       const dx = mx - n.x;
       const dy = my - n.y;
-      if (Math.sqrt(dx * dx + dy * dy) <= n.size + 4) {
+      if (Math.sqrt(dx * dx + dy * dy) <= (n.size || 14) + 4) {
         found = n;
         break;
       }
@@ -821,7 +1001,7 @@ class ConceptGraphController {
 
     this.nodeCard.style.display = 'block';
     if (this.nodeCardTitle) this.nodeCardTitle.innerText = node.label;
-    if (this.nodeCardDesc) this.nodeCardDesc.innerText = node.description || 'Core concept extracted from course curriculum.';
+    if (this.nodeCardDesc)  this.nodeCardDesc.innerText  = node.description || 'Core concept extracted from course curriculum.';
     if (this.nodeCardGroup) this.nodeCardGroup.innerText = (node.group || 'CONCEPT').toUpperCase();
 
     if (node.formula && this.nodeFormulaBox && this.nodeFormula) {
@@ -837,6 +1017,7 @@ class ConceptGraphController {
     this.selectedNode = null;
   }
 }
+
 
 class AnalyticsController {
   constructor(app) {
@@ -868,10 +1049,31 @@ class AnalyticsController {
     try {
       const res = await fetch('/api/analytics/overview');
       const data = await res.json();
-      this.renderAnalytics(data);
+      if (!data.total_quizzes_taken || data.total_quizzes_taken === 0) {
+        this._renderEmptyState();
+      } else {
+        this.renderAnalytics(data);
+      }
     } catch (e) {
       console.error('Failed to load analytics overview:', e);
     }
+  }
+
+  _renderEmptyState() {
+    const container = document.getElementById('analytics-content') ||
+                      document.querySelector('#tab-analytics');
+    if (!container) return;
+    const emptyEl = container.querySelector('.analytics-empty-placeholder') ||
+                    document.createElement('div');
+    emptyEl.className = 'analytics-empty analytics-empty-placeholder';
+    emptyEl.innerHTML = `
+      <span class="empty-icon-glow">📊</span>
+      <strong>No quiz data yet!</strong><br>
+      <small>Head to <em>Exam Arena</em> and take your first quiz to see your readiness score, topic mastery, and weak spots populate here.</small>
+    `;
+    const existingReadiness = container.querySelector('.readiness-gauge-section');
+    if (existingReadiness) existingReadiness.style.opacity = '0.4';
+    container.prepend(emptyEl);
   }
 
   renderAnalytics(data) {
@@ -1170,6 +1372,21 @@ class SyllabusApp {
       if (e.target === this.settingsModal) this.settingsModal.style.display = 'none';
     });
     this.btnSaveSettings?.addEventListener('click', () => this.saveSettings());
+
+    // Drag-and-drop visual feedback on the drop zone
+    this.dropZone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      this.dropZone.classList.add('drag-over');
+    });
+    this.dropZone?.addEventListener('dragleave', () => {
+      this.dropZone.classList.remove('drag-over');
+    });
+    this.dropZone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.dropZone.classList.remove('drag-over');
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) this.uploadFiles(files);
+    });
   }
 
   setMode(mode) {
@@ -1652,14 +1869,37 @@ class SyllabusApp {
 
   renderScorecard(res) {
     this.quizResults.style.display = 'block';
+    const gradeColor = res.score_percentage >= 85 ? 'var(--accent-emerald)' : (res.score_percentage >= 60 ? 'var(--accent-amber)' : '#ef4444');
+    const gradeEmoji = res.score_percentage >= 85 ? '🏆' : (res.score_percentage >= 60 ? '📈' : '📖');
+
+    let feedbackHtml = '';
+    if (res.feedback && res.feedback.length > 0) {
+      feedbackHtml = `
+        <div style="margin-top:18px;">
+          <h4 style="margin-bottom:10px;font-size:14px;color:var(--text-muted);">📋 Question Breakdown:</h4>
+          ${res.feedback.map((f, i) => `
+            <div style="background:var(--bg-secondary);border-radius:12px;padding:12px 15px;margin-bottom:8px;border-left:3px solid ${f.is_correct ? 'var(--accent-emerald)' : '#ef4444'};">
+              <div style="font-size:12.5px;font-weight:600;color:var(--text-main);margin-bottom:4px;">
+                ${f.is_correct ? '✅' : '❌'} Q${i + 1}: ${this.escapeHtml(f.question)}
+              </div>
+              ${!f.is_correct ? `<div style="font-size:12px;color:var(--text-muted);">Your answer: <em>${this.escapeHtml(f.user_answer || 'Not answered')}</em> | Correct: <strong style="color:var(--accent-emerald)">${this.escapeHtml(f.correct_answer)}</strong></div>` : ''}
+              ${f.explanation ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:3px;">${this.escapeHtml(f.explanation)}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
     this.quizResults.innerHTML = `
       <div class="scorecard">
-        <h3>Exam Performance Scorecard</h3>
-        <div class="score-badge">${res.score_percentage}%</div>
-        <p><strong>Grade:</strong> ${res.grade} | Correct: ${res.correct_count} / ${res.total_questions}</p>
+        <h3>${gradeEmoji} Exam Performance Scorecard</h3>
+        <div class="score-badge" style="color:${gradeColor}">${res.score_percentage}%</div>
+        <p><strong>Grade:</strong> <span style="color:${gradeColor}">${res.grade}</span> &nbsp;|&nbsp; Correct: ${res.correct_count} / ${res.total_questions}</p>
+        ${feedbackHtml}
       </div>
     `;
     this.quizResults.scrollIntoView({ behavior: 'smooth' });
+    this._toast(`${gradeEmoji} Quiz submitted! Score: ${res.score_percentage}%`, res.score_percentage >= 70 ? 'success' : 'info');
   }
 
   async exportWorksheet() {
@@ -1822,10 +2062,15 @@ class SyllabusApp {
     const formData = new FormData();
     for (let f of files) formData.append('files', f);
 
+    this._toast('📤 Uploading and indexing documents...', 'info');
     try {
-      await fetch('/api/upload', { method: 'POST', body: formData });
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      this._toast(`✅ ${data.files?.length || 1} file(s) indexed (${data.chunks_indexed || 0} chunks)`, 'success');
       this.fetchSystemStatus();
-    } catch {}
+    } catch {
+      this._toast('⚠️ Upload failed. Please try again.', 'error');
+    }
   }
 
   async loadSampleMaterial() {
@@ -1845,14 +2090,41 @@ class SyllabusApp {
     const key = this.geminiKeyInput?.value?.trim();
     const model = this.modelSelect?.value;
     if (key) {
-      await fetch('/api/config/key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: key, model_name: model })
-      });
+      try {
+        await fetch('/api/config/key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: key, model_name: model })
+        });
+        this._toast('✅ API Key saved! Live AI mode activated.', 'success');
+      } catch {
+        this._toast('⚠️ Failed to save API key. Check connection.', 'error');
+      }
+    } else {
+      this._toast('ℹ️ Settings saved (no API key provided).', 'info');
     }
     this.settingsModal.style.display = 'none';
     this.fetchSystemStatus();
+  }
+
+  _toast(message, type = 'info') {
+    const existing = document.getElementById('syllabus-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'syllabus-toast';
+    const colors = { success: '#10b981', error: '#ef4444', info: '#6366f1' };
+    toast.style.cssText = `
+      position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+      background: rgba(10,12,26,0.97); border: 1px solid ${colors[type] || colors.info};
+      color: #f1f5f9; padding: 14px 22px; border-radius: 14px;
+      font-size: 13.5px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      animation: toast-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      max-width: 380px; line-height: 1.5;
+    `;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3800);
   }
 
   escapeHtml(str) {
