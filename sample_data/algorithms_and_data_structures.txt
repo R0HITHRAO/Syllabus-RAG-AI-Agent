@@ -1,0 +1,333 @@
+--- Page 1 ---
+# Chapter 1: Algorithm Analysis and Complexity Theory
+Course: CS201 Data Structures and Algorithms
+Author: Academic Department of Computer Science
+
+## 1.1 Asymptotic Notation Fundamentals
+
+### Big O Notation (O) - Upper Bound
+Big O describes the worst-case scenario for algorithm efficiency.
+f(n) = O(g(n)) if 0 <= f(n) <= c * g(n) for all n >= n0.
+
+Common Complexity Classes:
+- O(1) - Constant time: Array access, hash table lookup
+- O(log n) - Logarithmic: Binary search, balanced tree operations
+- O(n) - Linear: Linear search, array traversal
+- O(n log n) - Linearithmic: Merge sort, heap sort
+- O(n^2) - Quadratic: Bubble sort, selection sort
+- O(2^n) - Exponential: Recursive Fibonacci
+- O(n!) - Factorial: Permutation generation
+
+### Big Omega (Omega) - Lower Bound
+f(n) = Omega(g(n)) if 0 <= c * g(n) <= f(n) for all n >= n0.
+
+### Big Theta (Theta) - Tight Bound
+f(n) = Theta(g(n)) if f(n) = O(g(n)) AND f(n) = Omega(g(n)).
+
+--- Page 2 ---
+# Chapter 1: Algorithm Analysis (Continued)
+
+## 1.2 Master Theorem for Divide-and-Conquer
+
+For recurrences of the form: T(n) = aT(n/b) + f(n)
+
+Case 1: If f(n) = O(n^(log_b a - epsilon)), then T(n) = Theta(n^(log_b a))
+Case 2: If f(n) = Theta(n^(log_b a)), then T(n) = Theta(n^(log_b a) * log n)
+Case 3: If f(n) = Omega(n^(log_b a + epsilon)), then T(n) = Theta(f(n))
+
+Example - Merge Sort: T(n) = 2T(n/2) + Theta(n) gives T(n) = Theta(n log n)
+
+--- Page 3 ---
+# Chapter 2: Arrays, Linked Lists and Stacks
+
+## 2.1 Array Data Structure
+
+Arrays store elements in contiguous memory locations.
+- Access time: O(1) for random access via index
+- Search time: O(n) linear, O(log n) if sorted (binary search)
+- Insertion/Deletion: O(n) due to shifting elements
+
+### Dynamic Array (ArrayList)
+When array fills up, create new array of double size and copy elements.
+Amortized insertion cost: O(1)
+
+## 2.2 Singly Linked List
+
+Node Structure:
+class Node:
+    def __init__(self, data):
+        self.data = data
+        self.next = None
+
+Operations Complexity:
+- Insert at head: O(1)
+- Insert at tail: O(n) (or O(1) with tail pointer)
+- Delete: O(n) to find, O(1) to remove
+- Search: O(n)
+
+--- Page 4 ---
+# Chapter 2: Linked Lists (Continued)
+
+## 2.3 Doubly Linked List
+
+Each node has both next and previous pointers.
+- Advantages: O(1) deletion given node reference, bidirectional traversal
+- Disadvantage: Extra memory for prev pointer
+
+## 2.4 Stack ADT (Abstract Data Type)
+
+LIFO (Last In, First Out) principle.
+Operations:
+- push(x): Add element to top - O(1)
+- pop(): Remove and return top element - O(1)
+- peek(): View top without removing - O(1)
+- isEmpty(): Check if stack is empty - O(1)
+
+Implementation:
+- Array-based: Fixed size, potential overflow
+- Linked list-based: Dynamic size, no overflow
+
+Applications:
+- Function call stack (recursion)
+- Undo/Redo operations
+- Expression evaluation (postfix/prefix)
+- Backtracking algorithms
+
+--- Page 5 ---
+# Chapter 3: Queues and Circular Buffers
+
+## 3.1 Queue ADT
+
+FIFO (First In, First Out) principle.
+Operations:
+- enqueue(x): Add to rear - O(1)
+- dequeue(): Remove from front - O(1)
+- peek(): View front element - O(1)
+
+Circular Queue Implementation:
+Uses modulo arithmetic to wrap around:
+front = (front + 1) % capacity
+rear = (rear + 1) % capacity
+
+Condition for full: (rear + 1) % capacity == front
+Condition for empty: front == rear
+
+## 3.2 Deque (Double-ended Queue)
+
+Supports insertion/deletion at both ends.
+Applications:
+- Palindrome checking
+- Sliding window algorithms
+- Work stealing scheduling
+
+--- Page 6 ---
+# Chapter 4: Trees and Binary Search Trees
+
+## 4.1 Tree Fundamentals
+
+Tree: A hierarchical data structure with nodes connected by edges.
+Properties:
+- Root: Topmost node (no parent)
+- Leaf: Node with no children
+- Height: Maximum edges from root to leaf
+- Depth: Edges from root to a specific node
+- Full binary tree: Each node has 0 or 2 children
+- Complete binary tree: All levels filled except possibly last (left to right)
+- Perfect binary tree: All interior nodes have 2 children, all leaves at same level
+
+## 4.2 Binary Search Tree (BST)
+
+For every node:
+- Left subtree contains only nodes with keys LESS than node key
+- Right subtree contains only nodes with keys GREATER than node key
+- Both subtrees must also be BSTs
+
+Operations (average case):
+- Search: O(log n)
+- Insert: O(log n)
+- Delete: O(log n)
+
+Worst case (degenerate/skewed tree): O(n)
+
+--- Page 7 ---
+# Chapter 4: BST Operations (Continued)
+
+## 4.3 BST Deletion Cases
+
+1. Leaf node (no children): Simply remove
+2. Node with one child: Replace node with child
+3. Node with two children:
+   - Find inorder successor (minimum in right subtree) OR
+   - Find inorder predecessor (maximum in left subtree)
+   - Copy successor/predecessor value to node
+   - Delete the successor/predecessor
+
+## 4.4 AVL Trees (Self-Balancing BST)
+
+AVL Tree Property: For every node, |height(left) - height(right)| <= 1
+
+Rotations to maintain balance:
+- Left Rotation: When right subtree is heavier
+- Right Rotation: When left subtree is heavier
+- Left-Right Rotation: Left child right subtree heavy
+- Right-Left Rotation: Right child left subtree heavy
+
+Time Complexity (guaranteed):
+- Search: O(log n)
+- Insert: O(log n)
+- Delete: O(log n)
+
+--- Page 8 ---
+# Chapter 5: Hash Tables and Collision Resolution
+
+## 5.1 Hash Table Basics
+
+Hash function h(k) maps key k to an index in [0, m-1] where m is table size.
+
+Properties of good hash function:
+- Deterministic: Same key gives same index
+- Uniform distribution: Keys spread evenly
+- Efficient to compute
+
+## 5.2 Collision Resolution
+
+### Separate Chaining
+Each slot points to a linked list of entries.
+Load factor alpha = n/m (average chain length)
+Search: O(1 + alpha) average, O(n) worst case
+
+### Open Addressing
+All elements stored in table itself.
+- Linear Probing: h(k, i) = (h_prime(k) + i) mod m (primary clustering)
+- Quadratic Probing: h(k, i) = (h_prime(k) + c1*i + c2*i^2) mod m
+- Double Hashing: h(k, i) = (h1(k) + i * h2(k)) mod m (best distribution)
+
+--- Page 9 ---
+# Chapter 5: Hash Tables (Continued)
+
+## 5.3 Hash Function Design
+
+Division Method: h(k) = k mod m
+- Choose m as prime number, not close to power of 2
+
+Multiplication Method:
+h(k) = floor(m * (k * A mod 1))
+where 0 < A < 1 (Knuth recommends A approx 0.618)
+
+## 5.4 Load Factor and Rehashing
+
+When alpha exceeds threshold (typically 0.75):
+1. Create new table of size approx 2m
+2. Reinsert all elements using new hash function
+3. Amortized O(1) insertion
+
+--- Page 10 ---
+# Chapter 6: Graphs and Traversal Algorithms
+
+## 6.1 Graph Representations
+
+### Adjacency Matrix
+n x n matrix where A[i][j] = 1 if edge exists.
+- Space: O(V^2)
+- Edge lookup: O(1)
+- Good for dense graphs
+
+### Adjacency List
+Array of V lists, each containing neighbors.
+- Space: O(V + E)
+- Good for sparse graphs
+- Iteration over neighbors: O(degree(v))
+
+## 6.2 Breadth-First Search (BFS)
+
+Time Complexity: O(V + E)
+Uses queue for level-by-level traversal.
+Finds shortest path in unweighted graphs.
+
+--- Page 11 ---
+# Chapter 6: Graph Traversal (Continued)
+
+## 6.3 Depth-First Search (DFS)
+
+Time Complexity: O(V + E)
+Uses recursion or stack.
+
+Applications:
+- Topological sorting
+- Cycle detection
+- Connected components
+- Strongly connected components (Kosaraju, Tarjan)
+
+--- Page 12 ---
+# Chapter 7: Sorting Algorithms
+
+## 7.1 Comparison-based Sorting Lower Bound
+
+Any comparison-based sort requires Omega(n log n) comparisons in worst case.
+Decision tree model: n! possible permutations, need height >= log(n!) = Omega(n log n).
+
+## 7.2 Bubble Sort - O(n^2) average and worst, O(n) best
+## 7.3 Selection Sort - O(n^2) always, O(1) space, minimum swaps
+## 7.4 Insertion Sort - O(n^2) worst/average, O(n) best, efficient for small arrays
+
+## 7.5 Merge Sort - O(n log n) always, stable, O(n) space
+## 7.6 QuickSort - O(n log n) avg, O(n^2) worst, in-place, not stable
+## 7.7 Heap Sort - O(n log n) always, in-place, not stable
+
+--- Page 13 ---
+# Chapter 8: Dynamic Programming
+
+## 8.1 DP Fundamentals
+
+Dynamic Programming applies when:
+1. Optimal substructure: Optimal solution contains optimal solutions to subproblems
+2. Overlapping subproblems: Same subproblems solved multiple times
+
+Two approaches:
+- Top-down (Memoization): Recursion + cache
+- Bottom-up (Tabulation): Iterative, build table
+
+## 8.2 0/1 Knapsack Problem
+
+Given n items with weights w[i] and values v[i], capacity W.
+Maximize value while total weight <= W, each item used at most once.
+
+DP Formulation:
+dp[i][w] = max value using first i items with capacity w
+
+Recurrence:
+dp[i][w] = max(dp[i-1][w], dp[i-1][w-w[i]] + v[i]) if w[i] <= w
+dp[i][w] = dp[i-1][w] otherwise
+
+Time: O(nW), Space: O(nW) or O(W) with optimization
+
+--- Page 14 ---
+# Chapter 8: DP Classic Problems (Continued)
+
+## 8.3 Longest Common Subsequence (LCS)
+
+Given strings X[1..m] and Y[1..n], find length of longest common subsequence.
+
+DP Formulation:
+c[i][j] = length of LCS of X[1..i] and Y[1..j]
+
+Recurrence:
+c[i][j] = 0 if i=0 or j=0
+c[i][j] = c[i-1][j-1] + 1 if X[i] = Y[j]
+c[i][j] = max(c[i-1][j], c[i][j-1]) if X[i] != Y[j]
+
+Time: O(mn), Space: O(mn) or O(min(m,n)) optimized
+
+## 8.4 Matrix Chain Multiplication
+
+Given matrices A1, A2, ..., An where A[i] is p[i-1] x p[i]:
+Find optimal parenthesization to minimize scalar multiplications.
+
+DP Formulation:
+m[i][j] = minimum multiplications for A[i..j]
+
+Recurrence:
+m[i][j] = 0 if i = j
+m[i][j] = min(m[i][k] + m[k+1][j] + p[i-1]*p[k]*p[j]) for i <= k < j
+
+Time: O(n^3), Space: O(n^2)

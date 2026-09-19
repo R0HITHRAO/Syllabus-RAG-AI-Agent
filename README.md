@@ -119,7 +119,8 @@ Syllabus-RAG-AI-Agent/
 | Method | Route | Description |
 | :--- | :--- | :--- |
 | `GET` | `/api/status` | Health check, document index stats, and active model status. |
-| `POST` | `/api/query` | SSE Streaming endpoint for AI Agent Chat queries with citation metadata. |
+| `POST` | `/api/chat` | Standard chat endpoint for AI Agent queries with citation metadata. |
+| `POST` | `/api/chat/stream` | SSE Streaming endpoint for AI Agent Chat queries with real-time token streaming. |
 | `POST` | `/api/podcast/generate` | Generates a 2-host conversational study podcast dialogue. |
 | `GET` | `/api/graph/data` | Returns node and edge topology for the interactive concept mind-map. |
 | `GET` | `/api/analytics/overview` | Returns exam readiness percentage, topic mastery scores, and weak area alerts. |
@@ -127,8 +128,8 @@ Syllabus-RAG-AI-Agent/
 | `POST` | `/api/quiz/generate` | Generates dynamic MCQ or descriptive examination papers. |
 | `POST` | `/api/quiz/submit` | Auto-grades student answers, generating scores and textbook page rationales. |
 | `POST` | `/api/quiz/export` | Generates a formatted, printable Markdown examination worksheet. |
-| `POST` | `/api/flashcards/generate` | Generates active recall flashcards with 3D flip capabilities. |
-| `POST` | `/api/cheatsheet/generate` | Compiles a high-yield summary cheat-sheet for the course. |
+| `POST` | `/api/flashcards` | Generates active recall flashcards with 3D flip capabilities. |
+| `POST` | `/api/cheatsheet` | Compiles a high-yield summary cheat-sheet for the course. |
 | `POST` | `/api/upload` | Uploads and indexes multi-format course materials (PDF, PPTX, DOCX, TXT). |
 | `POST` | `/api/config/key` | Updates Gemini API key and active generative model. |
 
