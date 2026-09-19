@@ -1205,6 +1205,15 @@ class SyllabusApp {
     this.cheatsheetContent = document.getElementById('cheatsheet-content');
     this.btnDownloadCheatsheet = document.getElementById('btn-download-cheatsheet');
 
+    // Flashcard detail modal elements
+    this.btnFlipFlashcard = document.getElementById('btn-flip-flashcard');
+    this.btnCloseFlashcardDetail = document.getElementById('btn-close-flashcard-detail');
+    this.fcDetailTopic = document.getElementById('fc-detail-topic');
+    this.fcDetailSource = document.getElementById('fc-detail-source');
+    this.fcDetailFront = document.getElementById('fc-detail-front');
+    this.fcDetailBack = document.getElementById('fc-detail-back');
+    this.flashcardDetail = document.getElementById('flashcard-detail');
+
     this.btnOpenSettings = document.getElementById('btn-open-settings');
     this.settingsModal = document.getElementById('settings-modal');
     this.btnCloseSettings = document.getElementById('btn-close-settings');
@@ -1365,6 +1374,25 @@ class SyllabusApp {
     this.btnGenerateCards?.addEventListener('click', () => this.generateFlashcards());
     this.btnGenerateCheatsheet?.addEventListener('click', () => this.generateCheatsheet());
     this.btnDownloadCheatsheet?.addEventListener('click', () => this.downloadCheatsheet());
+
+    // Flashcard interaction event listeners
+    this.btnFlipFlashcard?.addEventListener('click', () => this.flipFlashcard());
+    this.btnCloseFlashcardDetail?.addEventListener('click', () => this.closeFlashcardDetail());
+    document.addEventListener('click', (e) => {
+      const detail = document.getElementById('flashcard-detail');
+      if (detail && detail.classList.contains('active')) {
+        // Close if clicking outside the detail card
+        if (!detail.contains(e.target) && e.target !== document.querySelector(`#flashcards-container .flashcard-item`)) {
+          this.closeFlashcardDetail();
+        }
+      }
+      // Handle star rating clicks
+      const starBtn = e.target.closest('.star-btn');
+      if (starBtn && detail?.classList.contains('active')) {
+        const rating = parseInt(starBtn.dataset.rating) || 1;
+        this.rateFlashcard(rating);
+      }
+    });
 
     this.btnOpenSettings?.addEventListener('click', () => this.settingsModal.style.display = 'flex');
     this.btnCloseSettings?.addEventListener('click', () => this.settingsModal.style.display = 'none');
@@ -1726,6 +1754,142 @@ class SyllabusApp {
     return names[this.currentPersona] || 'AI Agent';
   }
 
+  /* --- Sidebar Toggle --- */
+  toggleChatSidebar() {
+    const sidebar = document.getElementById('chat-sidebar');
+    const main = document.querySelector('.workspace-layout');
+    if (sidebar) {
+      sidebar.classList.toggle('collapsed');
+      if (main) {
+        main.classList.toggle('sidebar-collapsed');
+      }
+    }
+  }
+
+  /* --- Session Management --- */
+  mountChatHistorySidebar() {
+    this.renderSessionList();
+  }
+
+  renderSessionList() {
+    const list = document.getElementById('sessions-list');
+    if (!list) return;
+    
+    if (this.sessions.length === 0) {
+      list.innerHTML = `
+        <div class="empty-sessions">
+          <span class="empty-icon-glow">💬</span>
+          <p>No conversation history yet</p>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = this.sessions.map(session => `
+      <div class="chat-session-item ${session.id === this.activeSessionId ? 'active' : ''}" data-session-id="${session.id}">
+        <div class="session-info">
+          <span class="session-title">${this.escapeHtml(session.title || 'New Chat')}</span>
+          <span class="session-meta">${new Date(session.updated_at).toLocaleDateString()}</span>
+        </div>
+        <div class="session-actions">
+          <button class="session-delete-btn" data-session-id="${session.id}" title="Delete">&times;</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Add click listeners
+    list.querySelectorAll('.chat-session-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('session-delete-btn')) {
+          const sessionId = parseInt(item.dataset.sessionId);
+          this.loadSession(sessionId);
+        }
+      });
+    });
+
+    // Add delete listeners
+    list.querySelectorAll('.session-delete-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sessionId = parseInt(btn.dataset.sessionId);
+        this.deleteSession(sessionId);
+      });
+    });
+  }
+
+  updateChatSessionTitle(title) {
+    const session = this.sessions.find(s => s.id === this.activeSessionId);
+    if (session) {
+      session.title = title;
+      session.updated_at = Date.now();
+      this.saveSessions();
+      this.renderSessionList();
+    }
+  }
+
+  createNewSession() {
+    const newSession = {
+      id: Date.now(),
+      title: 'New Chat',
+      created_at: Date.now(),
+      updated_at: Date.now(),
+      messages: []
+    };
+    this.sessions.unshift(newSession);
+    this.activeSessionId = newSession.id;
+    this.chatHistory = [];
+    this.saveSessions();
+    this.renderSessionList();
+    this.chatMessages.innerHTML = `
+      <div class="welcome-hero-card">
+        <div class="welcome-icon">👋</div>
+        <h2>Welcome to SyllabusAI</h2>
+        <p>I'm your autonomous academic agent. Ask me anything about your course materials, request code implementations, or explore concepts with grounded syllabus citations.</p>
+        <div class="quick-actions" id="quick-actions">
+          <span class="quick-actions-label">Quick Actions:</span>
+          <button class="quick-action-btn" data-action="explain">📖 Explain Concept</button>
+          <button class="quick-action-btn" data-action="code">💻 Write Code</button>
+          <button class="quick-action-btn" data-action="quiz">📝 Generate Quiz</button>
+          <button class="quick-action-btn" data-action="podcast">🎙️ Podcast</button>
+        </div>
+      </div>
+    `;
+    this.attachQuickActionListeners();
+    this.scrollToBottom();
+  }
+
+  loadSession(sessionId) {
+    const session = this.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    
+    this.activeSessionId = sessionId;
+    this.chatHistory = session.messages || [];
+    this.renderSessionList();
+    
+    // Re-render chat messages
+    this.chatMessages.innerHTML = '';
+    if (this.chatHistory.length === 0) {
+      this.createNewSession();
+      return;
+    }
+
+    this.chatHistory.forEach(msg => {
+      this.appendMessageElement(msg.role, msg.content, msg.citations || [], false);
+    });
+    this.scrollToBottom();
+    this.renderMath();
+  }
+
+  deleteSession(sessionId) {
+    if (!confirm('Delete this conversation?')) return;
+    this.sessions = this.sessions.filter(s => s.id !== sessionId);
+    if (this.activeSessionId === sessionId) {
+      this.createNewSession();
+    }
+    this.saveSessions();
+    this.renderSessionList();
+  }
+
   renderMarkdown(text) {
     if (!text) return '';
     let parsed = this.escapeHtml(text);
@@ -1951,29 +2115,29 @@ class SyllabusApp {
 
     cards.forEach((c, idx) => {
       const wrap = document.createElement('div');
-      wrap.className = 'flashcard-wrapper';
+      wrap.className = 'flashcard-item';
+      wrap.dataset.cardIndex = idx;
       wrap.innerHTML = `
-        <div class="flashcard-inner">
-          <div class="flashcard-front">
-            <span class="card-badge">Card ${idx + 1}</span>
-            <h4>${this.escapeHtml(c.front)}</h4>
-            <span class="flip-hint">👆 Click to Flip</span>
-          </div>
-          <div class="flashcard-back">
-            <p>${this.escapeHtml(c.back)}</p>
-            <div class="card-rating-bar">
-              <button class="rating-btn" title="Mastered">🟢 Easy</button>
-              <button class="rating-btn" title="Reviewing">🟡 Med</button>
-              <button class="rating-btn" title="Need Practice">🔴 Hard</button>
-            </div>
-          </div>
+        <div class="flashcard-item-header">
+          <span class="flashcard-number">Card ${idx + 1}</span>
+          <span class="flashcard-source-tag">${c.source_doc || 'Course Material'}, Page ${c.source_page || '-'}</span>
+        </div>
+        <div class="flashcard-front">
+          <div class="flashcard-label">QUESTION</div>
+          <p>${this.escapeHtml(c.front)}</p>
+        </div>
+        <div class="flashcard-rating-stars" style="margin-top: 12px; opacity: 0.6;">
+          <button class="star-btn" data-rating="1">⬜</button>
+          <button class="star-btn" data-rating="2">⬜</button>
+          <button class="star-btn" data-rating="3">⬜</button>
+          <button class="star-btn" data-rating="4">⬜</button>
+          <button class="star-btn" data-rating="5">⬜</button>
         </div>
       `;
 
-      wrap.querySelector('.flashcard-inner').addEventListener('click', (e) => {
-        if (!e.target.classList.contains('rating-btn')) {
-          wrap.classList.toggle('flipped');
-        }
+      wrap.addEventListener('click', (e) => {
+        if (e.target.closest('.star-btn')) return; // Let star handler deal with it
+        this.showFlashcardDetail(c);
       });
 
       this.flashcardsContainer.appendChild(wrap);
@@ -2003,6 +2167,91 @@ class SyllabusApp {
     a.download = 'High_Yield_Revision_Cheatsheet.md';
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  /* --- FLASHCARD INTERACTION --- */
+  showFlashcardDetail(card) {
+    const detail = document.getElementById('flashcard-detail');
+    if (!detail) return;
+
+    document.getElementById('fc-detail-topic').textContent = card.topic || 'Key Concept';
+    document.getElementById('fc-detail-source').textContent = card.source_doc ? `${card.source_doc}, Page ${card.source_page}` : '';
+    document.getElementById('fc-detail-front').textContent = card.front || 'No content';
+    document.getElementById('fc-detail-back').textContent = card.back || 'No content';
+
+    detail.style.display = 'block';
+    detail.classList.add('active');
+
+    this.currentFlashcard = card;
+    this.flashcardFlipped = false;
+
+    // Reset flip state
+    const back = detail.querySelector('.flashcard-back');
+    const front = detail.querySelector('.flashcard-front');
+    const flipBtn = document.getElementById('btn-flip-flashcard');
+    if (back) back.style.display = 'none';
+    if (front) front.style.display = 'block';
+    if (flipBtn) flipBtn.textContent = '🔄 Flip to See Answer';
+
+    // Reset rating
+    const stars = detail.querySelectorAll('.star-btn');
+    stars.forEach(s => s.classList.remove('active'));
+  }
+
+  closeFlashcardDetail() {
+    const detail = document.getElementById('flashcard-detail');
+    if (detail) {
+      detail.style.display = 'none';
+      detail.classList.remove('active');
+    }
+    this.currentFlashcard = null;
+  }
+
+  flipFlashcard() {
+    const detail = document.getElementById('flashcard-detail');
+    if (!detail) return;
+
+    this.flashcardFlipped = !this.flashcardFlipped;
+
+    const back = detail.querySelector('.flashcard-back');
+    const front = detail.querySelector('.flashcard-front');
+    const flipBtn = document.getElementById('btn-flip-flashcard');
+
+    if (this.flashcardFlipped) {
+      if (back) back.style.display = 'block';
+      if (front) front.style.display = 'none';
+      if (flipBtn) flipBtn.textContent = '🔄 Show Question';
+    } else {
+      if (back) back.style.display = 'none';
+      if (front) front.style.display = 'block';
+      if (flipBtn) flipBtn.textContent = '🔄 Flip to See Answer';
+    }
+  }
+
+  rateFlashcard(rating) {
+    const detail = document.getElementById('flashcard-detail');
+    if (!detail) return;
+
+    const stars = detail.querySelectorAll('.star-btn');
+    stars.forEach((star, index) => {
+      if (index < rating) {
+        star.classList.add('active');
+        star.textContent = '⭐';
+      } else {
+        star.classList.remove('active');
+        star.textContent = '⬜';
+      }
+    });
+
+    // Save rating to card if tracking
+    if (this.currentFlashcard) {
+      this.currentFlashcard.userRating = rating;
+    }
+
+    // Auto-close after rating (optional - could also keep open)
+    setTimeout(() => {
+      this.closeFlashcardDetail();
+    }, 800);
   }
 
   /* --- SYSTEM STATUS & DOCS --- */
