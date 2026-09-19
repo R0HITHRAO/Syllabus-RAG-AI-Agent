@@ -416,7 +416,19 @@ code, pre, .mono, kbd {
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* Settings button specific styling */
+.settings-btn {
+  margin-left: auto; /* Push settings to the right */
+}
+
+/* Header controls wrapper - ensure proper alignment */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .control-pill-group {

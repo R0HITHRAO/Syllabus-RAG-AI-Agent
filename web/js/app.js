@@ -1214,7 +1214,7 @@ class SyllabusApp {
     this.fcDetailBack = document.getElementById('fc-detail-back');
     this.flashcardDetail = document.getElementById('flashcard-detail');
 
-    this.btnOpenSettings = document.getElementById('btn-open-settings');
+    this.btnSettings = document.getElementById('btn-settings');
     this.settingsModal = document.getElementById('settings-modal');
     this.btnCloseSettings = document.getElementById('btn-close-settings');
     this.btnSaveSettings = document.getElementById('btn-save-settings');
@@ -1394,7 +1394,7 @@ class SyllabusApp {
       }
     });
 
-    this.btnOpenSettings?.addEventListener('click', () => this.settingsModal.style.display = 'flex');
+    this.btnSettings?.addEventListener('click', () => this.settingsModal.style.display = 'flex');
     this.btnCloseSettings?.addEventListener('click', () => this.settingsModal.style.display = 'none');
     this.settingsModal?.addEventListener('click', (e) => {
       if (e.target === this.settingsModal) this.settingsModal.style.display = 'none';
