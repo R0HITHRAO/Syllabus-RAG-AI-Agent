@@ -1934,6 +1934,10 @@ button.prompt-chip:active, .prompt-chip:active {
   width: 440px;
   max-width: 90vw;
   padding: 24px;
+  background: var(--bg-glass-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--elevated-shadow);
 }
 .modal-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 
