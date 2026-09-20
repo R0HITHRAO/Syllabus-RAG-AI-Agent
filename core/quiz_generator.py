@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import random
 from typing import List, Dict, Any, Optional
 from core.config import (
     QUIZ_GENERATION_PROMPT,
@@ -106,14 +107,13 @@ class QuizGenerator:
 
         for q in quiz:
             q_id = q.get("id", 0)
-            user_choice = user_answers.get(q_id, "").strip().upper()
-            correct_choice = q.get("correct_option", "").strip().upper()
-            
-            # Extract letter if user submitted "A. Option"
-            if len(user_choice) > 1 and user_choice[1] in [".", ")", " "]:
-                user_choice = user_choice[0]
-            if len(correct_choice) > 1 and correct_choice[1] in [".", ")", " "]:
-                correct_choice = correct_choice[0]
+            raw_user = user_answers.get(q_id, user_answers.get(str(q_id), ""))
+            user_choice = self._extract_option_letter(raw_user)
+            correct_choice = self._extract_option_letter(q.get("correct_option", ""))
+
+            # Fallback: correct_option may be stored as a numeric index (0-3)
+            if correct_choice in {"0", "1", "2", "3"}:
+                correct_choice = chr(ord("A") + int(correct_choice))
 
             is_correct = (user_choice == correct_choice)
             if is_correct:
@@ -122,7 +122,7 @@ class QuizGenerator:
             feedback_list.append({
                 "id": q_id,
                 "question": q.get("question", ""),
-                "user_answer": user_answers.get(q_id, "Not Answered"),
+                "user_answer": str(raw_user) if raw_user != "" else "Not Answered",
                 "correct_answer": correct_choice,
                 "is_correct": is_correct,
                 "explanation": q.get("explanation", ""),
@@ -139,6 +139,20 @@ class QuizGenerator:
             "grade": "A" if percentage >= 85 else "B" if percentage >= 70 else "C" if percentage >= 50 else "Needs Revision",
             "feedback": feedback_list
         }
+
+    def _extract_option_letter(self, value: Any) -> str:
+        """Normalize an option value to its letter ('A'-'D').
+        Handles 'A', 'a', 'A. Option text', 'A) text', '(A) text', '1'."""
+        if value is None:
+            return ""
+        v = str(value).strip().upper()
+        if not v:
+            return ""
+        if v[0].isalpha() and v[0] in "ABCD":
+            return v[0]
+        if v.isdigit() and len(v) == 1 and int(v) < 4:
+            return chr(ord("A") + int(v))
+        return v[:1]
 
     def _call_llm_json(self, prompt: str) -> str:
         """Execute LLM call expecting JSON response."""
@@ -199,17 +213,22 @@ class QuizGenerator:
         for idx, ch in enumerate(chunks[:num_questions], start=1):
             sentences = [s.strip() for s in ch["text"].split(". ") if len(s.strip()) > 30]
             main_sentence = sentences[0] if sentences else ch["text"][:100]
-            
+
+            # Shuffle option placement so the correct answer is not always 'A'
+            options_pool = [
+                main_sentence[:120] + ".",
+                "The system halts immediately when external interrupts occur.",
+                "No memory management unit is required for virtual addressing.",
+                "None of the above."
+            ]
+            random.shuffle(options_pool)
+            correct_option = chr(ord("A") + options_pool.index(main_sentence[:120] + "."))
+
             mcqs.append({
                 "id": idx,
                 "question": f"According to {ch['source']} (Page {ch['page']}), which of the following is true regarding {topic or 'the syllabus'}?",
-                "options": [
-                    f"A. {main_sentence[:120]}.",
-                    "B. The system halts immediately when external interrupts occur.",
-                    "C. No memory management unit is required for virtual addressing.",
-                    "D. None of the above."
-                ],
-                "correct_option": "A",
+                "options": [f"{chr(ord('A') + i)}. {opt}" for i, opt in enumerate(options_pool)],
+                "correct_option": correct_option,
                 "explanation": f"Stated explicitly on Page {ch['page']} of {ch['source']}: '{main_sentence[:140]}...'",
                 "source_doc": ch["source"],
                 "source_page": ch["page"]
