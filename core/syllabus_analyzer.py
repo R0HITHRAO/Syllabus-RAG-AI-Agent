@@ -139,22 +139,41 @@ Requirements:
 
     def _fallback_flashcards(self, chunks: List[Dict[str, Any]], num_cards: int) -> List[Dict[str, Any]]:
         cards = []
-        # Extract individual concept sentences across all chunks
+        # Extract unique concept sentences across all chunks (dedupe to avoid
+        # showing the same card repeatedly when there are fewer concepts than cards)
+        seen_keys = set()
         all_concepts = []
         for ch in chunks:
-            sentences = [s.strip() for s in ch["text"].split("\n") if len(s.strip()) > 30 and not s.startswith("#")]
+            sentences = [s.strip() for s in ch["text"].replace(". ", ".\n").split("\n")
+                         if len(s.strip()) > 30 and not s.startswith("#")]
             for s in sentences:
+                key = s.lower()[:80]
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
                 all_concepts.append({"concept": s, "source": ch["source"], "page": ch["page"], "header": ch.get("section_header")})
 
         if not all_concepts:
             all_concepts = [{"concept": ch["text"][:120], "source": ch["source"], "page": ch["page"], "header": ch.get("section_header")} for ch in chunks]
 
-        for idx in range(num_cards):
-            item = all_concepts[idx % len(all_concepts)]
+        # Never emit more cards than there are unique concepts
+        cards_to_make = min(num_cards, len(all_concepts))
+
+        question_stems = [
+            "What is the key principle of {topic}?",
+            "Explain the concept of {topic}.",
+            "Why does {topic} matter in this course?",
+            "Summarize {topic} in one sentence.",
+        ]
+
+        for idx in range(cards_to_make):
+            item = all_concepts[idx]
+            topic_label = item.get("header") or f"Concept #{idx + 1}"
+            stem = question_stems[idx % len(question_stems)]
             cards.append({
                 "id": idx + 1,
-                "topic": item.get("header") or f"Concept #{idx + 1}",
-                "front": f"What is the key principle of {item.get('header') or 'this syllabus topic'} (Page {item['page']})?",
+                "topic": str(topic_label)[:60],
+                "front": stem.format(topic=str(topic_label)[:60]),
                 "back": f"{item['concept']}.\n\n(Source: {item['source']}, Page {item['page']})",
                 "source_doc": item["source"],
                 "source_page": item["page"]
