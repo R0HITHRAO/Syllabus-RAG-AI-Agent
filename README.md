@@ -176,5 +176,16 @@ Open your browser and navigate to:
 
 ---
 
+## 🛠️ Recent Improvements & Fixes
+
+- **✅ Correct MCQ Auto-Grading** — Option answers are normalized on both ends: the UI maps server option arrays to proper A/B/C/D letters (stripping duplicate prefixes), and the grader accepts string IDs, full-text answers ("B. Blue"), numeric indices ("1" → "B"), and punctuation variants. Verified: correct answers score 100%, wrong answers score 0%.
+- **🃏 Flashcards Fixed** — 3D flip CSS is scoped to flip wrappers only, so the detail modal's question/answer faces render correctly (previously mirrored and overlapped by `backface-visibility`); offline fallback decks are deduplicated with varied question stems; flip + star-rating recall interaction works end-to-end.
+- **🤖 Reliable Agent Streaming** — SSE chunks that split mid-line over TCP are buffered, so no tokens or citations are silently dropped during streaming.
+- **⚡ Jitter Eliminated** — Streaming chat re-renders are throttled to ~20fps with a final forced render, auto-scroll only engages when already near the bottom (no scroll-fighting), and 3D flip transforms use GPU compositing hints (`will-change`).
+- **🧪 End-to-End Test Suite** — `python tests/test_e2e_api.py` boots the app and verifies status, quiz generation/grading (100% & 0% paths), flashcards, agent chat, analytics, knowledge graph, and static serving — CI-ready with non-zero exit on failure.
+- **🗃️ Clean Runtime State** — `syllabus.db` is no longer tracked (auto-created on first run), keeping the working tree clean across test runs.
+
+---
+
 ## 📄 License
 This project is open-source and available under the [MIT License](LICENSE).
