@@ -56,9 +56,17 @@ class ThreeSceneController {
     this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     this.camera.position.set(0, 0, 60);
 
-    /* Renderer */
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    /* Renderer
+       ─────────────────────────────────────────────────────────────────────
+       antialias is intentionally OFF: this canvas is a decorative backdrop
+       that always sits behind a blurred aurora and frosted content, so MSAA
+       cost bought nothing visible while roughly doubling per-frame GPU work.
+       pixelRatio is capped at 1.5 (not 2) — a 2x stretched full-screen canvas
+       plus the aurora, grain and spotlight layers saturated the compositor
+       and made the browser shed raster quality on *content* layers, which is
+       what read as "the whole screen keeps getting blurrier". */
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'low-power' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setClearColor(0x000000, 0);
     container.appendChild(this.renderer.domElement);
@@ -71,7 +79,33 @@ class ThreeSceneController {
     window.addEventListener('mousemove', this._boundMouse);
     document.addEventListener('visibilitychange', this._boundVisibility);
 
+    /* Pause the loop entirely whenever the backdrop is scrolled out of view
+       or its container is hidden. Previously it rendered forever even when
+       nothing was on screen, stealing GPU time from the rest of the page. */
+    this._bindViewportPause(container);
+
+    this._lastFrame = 0;
+    this._frameBudget = 1000 / 30; /* cinematic 30fps cap — halves GPU load */
     this._animate();
+  }
+
+  /* ── Viewport-aware pause ───────────────────────────────────────────── */
+  _bindViewportPause(container) {
+    if (!('IntersectionObserver' in window)) return;
+    try {
+      this._io = new IntersectionObserver((entries) => {
+        const visible = entries.some((e) => e.isIntersecting);
+        if (visible && this._paused) {
+          this._paused = false;
+          this.clock.start();
+          this._animate();
+        } else if (!visible) {
+          this._paused = true;
+          cancelAnimationFrame(this.animId);
+        }
+      }, { threshold: 0 });
+      this._io.observe(container);
+    } catch (e) { /* non-fatal */ }
   }
 
   /* ── Scene Construction ─────────────────────────────────────────────── */
@@ -180,8 +214,18 @@ class ThreeSceneController {
   }
 
   /* ── Animation Loop ─────────────────────────────────────────────────── */
-  _animate() {
-    this.animId = requestAnimationFrame(() => this._animate());
+  _animate(now) {
+    this.animId = requestAnimationFrame((t) => this._animate(t));
+    if (this._paused) return;
+
+    /* 30fps frame budget: skip the whole update+draw on in-between frames.
+       The motion is slow ambient drift, so halving the rate is invisible
+       while freeing half the GPU time for text rasterization & scrolling. */
+    if (now !== undefined) {
+      if (now - (this._lastFrame || 0) < this._frameBudget) return;
+      this._lastFrame = now;
+    }
+
     const elapsed = this.clock.getElapsedTime();
 
     /* Float & rotate nodes */
@@ -288,51 +332,26 @@ class CardTilt3DController {
   }
 
   _attach(el) {
-    /* Ensure relative positioning for glare child */
-    el.style.position = 'relative';
-    el.style.overflow  = 'hidden';
-    el.style.willChange = 'transform';
+    /* ── Consolidated tilt — this controller is now inert on purpose ───────
+       motion.js owns the single 3D tilt engine (rAF-throttled, one writer,
+       hover-only `will-change`). This class previously ran a competing tilt:
+       two handler chains wrote `el.style.transform` on the same element every
+       pointermove, so they overwrote each other frame-by-frame (jitter), and
+       its permanent `will-change: transform` + `scale3d(1.03)` forced
+       Chromium to rasterize each card's text into a scaled GPU layer — the
+       root cause of text that looked soft/blurry and kept getting worse as
+       more cards mounted.
 
-    /* Glare element */
-    const glare = document.createElement('div');
-    glare.className = 'card-3d-glare';
-    el.appendChild(glare);
-
-    const onMove = (e) => {
-      const rect   = el.getBoundingClientRect();
-      const cx = e.clientX ?? (e.touches?.[0]?.clientX ?? 0);
-      const cy = e.clientY ?? (e.touches?.[0]?.clientY ?? 0);
-      const ox = cx - rect.left;
-      const oy = cy - rect.top;
-      const nx = (ox / rect.width  - 0.5) * 2;   /* -1 to 1 */
-      const ny = (oy / rect.height - 0.5) * 2;
-
-      const maxTilt = 10;
-      const tiltX   = -ny * maxTilt;
-      const tiltY   =  nx * maxTilt;
-
-      el.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.03,1.03,1.03)`;
-      el.style.transition = 'transform 0.12s ease';
-      el.style.boxShadow  = `0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(99,102,241,0.25)`;
-
-      /* Move glare */
-      glare.style.opacity = '1';
-      glare.style.background = `radial-gradient(circle at ${ox}px ${oy}px, rgba(255,255,255,0.18) 0%, transparent 65%)`;
-    };
-
-    const onLeave = () => {
-      el.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
-      el.style.transition = 'transform 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s ease';
-      el.style.boxShadow  = '';
-      glare.style.opacity = '0';
-    };
-
-    el.addEventListener('mousemove',  onMove);
-    el.addEventListener('mouseleave', onLeave);
-    el.addEventListener('touchmove',  onMove, { passive: true });
-    el.addEventListener('touchend',   onLeave);
-
-    this._bound.set(el, { onMove, onLeave });
+       We keep the class and its MutationObserver so nothing else has to
+       change, but attaching now means "handled", not "add another
+       transform writer". The card-sized selectors it used to cover
+       (.kpi-card, .prompt-chip, .podcast-hero-card, .config-card,
+       .welcome-hero-card) are all in motion.js's TILT_SELECTOR.
+       `.glass-surface` is deliberately NOT tilted: it is applied to 15
+       full-width panel containers, and tilting whole panels is what made
+       the page feel like it was swimming. */
+    el.dataset.tiltDelegated = '1';
+    this._bound.set(el, { delegated: true });
   }
 }
 
