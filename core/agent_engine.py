@@ -2,7 +2,6 @@ import os
 import re
 import json
 import time
-import asyncio
 from typing import List, Dict, Any, Optional, Generator
 from core.config import (
     PERSONA_PROMPTS,
@@ -54,7 +53,7 @@ class AIAgentEngine:
                     "done": (i == len(words) - 1)
                 }
                 yield f"data: {json.dumps(payload)}\n\n"
-                asyncio.sleep(0.015) # Smooth typewriter pacing
+                time.sleep(0.015) # Smooth typewriter pacing
             return
 
         # 2. Hybrid Search in Vector Store
@@ -141,7 +140,7 @@ class AIAgentEngine:
         for i, tok in enumerate(tokens):
             is_last = (i == len(tokens) - 1)
             yield f"data: {json.dumps({'token': tok, 'citations': citations, 'done': is_last})}\n\n"
-            asyncio.sleep(0.01)
+            time.sleep(0.01)
 
     def query(
         self,

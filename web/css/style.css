@@ -253,26 +253,25 @@ code, pre, .mono, kbd {
   background: rgba(255, 255, 255, 0.28);
 }
 
-/* Keyframes */
+/* Keyframes
+   NOTE: opacity-only on purpose — translateY/scale on tab panes & chat bubbles
+   momentarily extends the scrollable overflow area, which makes pinned-bottom
+   autoscroll (streaming chat) visibly jitter. */
 @keyframes tabFadeSlideIn {
   0% {
     opacity: 0;
-    transform: translateY(14px) scale(0.995);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes messagePopIn {
   0% {
     opacity: 0;
-    transform: translateY(16px) scale(0.98);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -298,7 +297,6 @@ code, pre, .mono, kbd {
   opacity: 0.85;
   pointer-events: none;
   z-index: 0;
-  transition: background-image 0.6s ease, opacity 0.6s ease;
 }
 
 .app-container {
@@ -1673,16 +1671,23 @@ button.prompt-chip:active, .prompt-chip:active {
   height: 100%;
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   transform-style: preserve-3d;
+  will-change: transform;
   cursor: pointer;
 }
 .flashcard-wrapper.flipped .flashcard-inner {
   transform: rotateY(180deg);
 }
 
-.flashcard-front, .flashcard-back {
+/* 3D flip geometry must ONLY apply inside .flashcard-wrapper contexts.
+   Unscoped, these rules also hit the flashcard detail modal faces, making the
+   answer mirrored (rotateY 180deg), absolutely positioned over the question,
+   or invisible (backface-visibility: hidden). */
+.flashcard-wrapper .flashcard-front,
+.flashcard-wrapper .flashcard-back {
   position: absolute;
   inset: 0;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
   padding: 20px;
@@ -1693,16 +1698,42 @@ button.prompt-chip:active, .prompt-chip:active {
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
   box-shadow: var(--card-shadow);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.flashcard-front:hover, .flashcard-back:hover {
+.flashcard-wrapper .flashcard-front:hover,
+.flashcard-wrapper .flashcard-back:hover {
   border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
 }
 
-.flashcard-back {
+.flashcard-wrapper .flashcard-back {
   background: var(--bg-tertiary);
   transform: rotateY(180deg);
+}
+
+/* Flashcard DETAIL MODAL faces: normal document flow, never mirrored */
+.flashcard-detail-card .flashcard-front,
+.flashcard-detail-card .flashcard-back {
+  position: static;
+  inset: auto;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  transform: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: block;
+  background: var(--bg-secondary);
+  box-shadow: none;
+  transition: none;
+}
+.flashcard-detail-card .flashcard-back {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--border-active);
+}
+.flashcard-detail-card .flashcard-front:hover,
+.flashcard-detail-card .flashcard-back:hover {
+  border-color: var(--border-active);
+  transform: none;
 }
 
 .card-badge { font-size: 11px; font-weight: 800; color: var(--accent-cyan); text-transform: uppercase; }
