@@ -1378,19 +1378,20 @@ class SyllabusApp {
     // Flashcard interaction event listeners
     this.btnFlipFlashcard?.addEventListener('click', () => this.flipFlashcard());
     this.btnCloseFlashcardDetail?.addEventListener('click', () => this.closeFlashcardDetail());
+    // Star rating inside the flashcard detail modal
+    document.querySelectorAll('#flashcard-detail .star-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.rateFlashcard(parseInt(btn.dataset.rating) || 1);
+      });
+    });
     document.addEventListener('click', (e) => {
       const detail = document.getElementById('flashcard-detail');
       if (detail && detail.classList.contains('active')) {
-        // Close if clicking outside the detail card
-        if (!detail.contains(e.target) && e.target !== document.querySelector(`#flashcards-container .flashcard-item`)) {
+        // Close only when clicking outside both the detail card AND any flashcard item
+        if (!detail.contains(e.target) && !e.target.closest('.flashcard-item')) {
           this.closeFlashcardDetail();
         }
-      }
-      // Handle star rating clicks
-      const starBtn = e.target.closest('.star-btn');
-      if (starBtn && detail?.classList.contains('active')) {
-        const rating = parseInt(starBtn.dataset.rating) || 1;
-        this.rateFlashcard(rating);
       }
     });
 
@@ -1595,13 +1596,40 @@ class SyllabusApp {
       const decoder = new TextDecoder();
       let fullAgentText = '';
       let collectedCitations = [];
+      let sseBuffer = '';
+      let lastRenderTime = 0;
+      let pendingRender = null;
+
+      const renderStreamingContent = (force = false) => {
+        // Throttle markdown re-parsing to ~20fps to prevent layout jitter,
+        // but always render immediately on the final token.
+        const now = performance.now();
+        if (!force && now - lastRenderTime < 50) {
+          if (!pendingRender) {
+            pendingRender = setTimeout(() => {
+              pendingRender = null;
+              renderStreamingContent(true);
+            }, 50);
+          }
+          return;
+        }
+        lastRenderTime = now;
+        contentEl.innerHTML = this.renderMarkdown(fullAgentText) + '<span class="typing-cursor"></span>';
+        // Only auto-scroll if the user is already near the bottom (prevents scroll-fighting)
+        const nearBottom = this.chatMessages.scrollHeight - this.chatMessages.scrollTop - this.chatMessages.clientHeight < 120;
+        if (nearBottom) this.scrollToBottom();
+      };
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
-        const chunkStr = decoder.decode(value, { stream: true });
-        const lines = chunkStr.split('\n');
+        sseBuffer += decoder.decode(value, { stream: true });
+
+        // Buffer incomplete SSE lines — splitting raw network chunks mid-line
+        // used to corrupt JSON payloads and drop tokens (visible rendering glitch).
+        const lines = sseBuffer.split('\n');
+        sseBuffer = lines.pop(); // keep the trailing partial line in the buffer
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -1609,8 +1637,7 @@ class SyllabusApp {
               const data = JSON.parse(line.substring(6));
               if (data.token) {
                 fullAgentText += data.token;
-                contentEl.innerHTML = this.renderMarkdown(fullAgentText) + '<span class="typing-cursor"></span>';
-                this.scrollToBottom();
+                renderStreamingContent();
               }
               if (data.citations && data.citations.length > 0) {
                 collectedCitations = data.citations;
@@ -1620,6 +1647,7 @@ class SyllabusApp {
         }
       }
 
+      if (pendingRender) { clearTimeout(pendingRender); pendingRender = null; }
       contentEl.innerHTML = this.renderMarkdown(fullAgentText);
       
       if (collectedCitations.length > 0) {
@@ -1766,130 +1794,6 @@ class SyllabusApp {
     }
   }
 
-  /* --- Session Management --- */
-  mountChatHistorySidebar() {
-    this.renderSessionList();
-  }
-
-  renderSessionList() {
-    const list = document.getElementById('sessions-list');
-    if (!list) return;
-    
-    if (this.sessions.length === 0) {
-      list.innerHTML = `
-        <div class="empty-sessions">
-          <span class="empty-icon-glow">💬</span>
-          <p>No conversation history yet</p>
-        </div>
-      `;
-      return;
-    }
-
-    list.innerHTML = this.sessions.map(session => `
-      <div class="chat-session-item ${session.id === this.activeSessionId ? 'active' : ''}" data-session-id="${session.id}">
-        <div class="session-info">
-          <span class="session-title">${this.escapeHtml(session.title || 'New Chat')}</span>
-          <span class="session-meta">${new Date(session.updated_at).toLocaleDateString()}</span>
-        </div>
-        <div class="session-actions">
-          <button class="session-delete-btn" data-session-id="${session.id}" title="Delete">&times;</button>
-        </div>
-      </div>
-    `).join('');
-
-    // Add click listeners
-    list.querySelectorAll('.chat-session-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('session-delete-btn')) {
-          const sessionId = parseInt(item.dataset.sessionId);
-          this.loadSession(sessionId);
-        }
-      });
-    });
-
-    // Add delete listeners
-    list.querySelectorAll('.session-delete-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const sessionId = parseInt(btn.dataset.sessionId);
-        this.deleteSession(sessionId);
-      });
-    });
-  }
-
-  updateChatSessionTitle(title) {
-    const session = this.sessions.find(s => s.id === this.activeSessionId);
-    if (session) {
-      session.title = title;
-      session.updated_at = Date.now();
-      this.saveSessions();
-      this.renderSessionList();
-    }
-  }
-
-  createNewSession() {
-    const newSession = {
-      id: Date.now(),
-      title: 'New Chat',
-      created_at: Date.now(),
-      updated_at: Date.now(),
-      messages: []
-    };
-    this.sessions.unshift(newSession);
-    this.activeSessionId = newSession.id;
-    this.chatHistory = [];
-    this.saveSessions();
-    this.renderSessionList();
-    this.chatMessages.innerHTML = `
-      <div class="welcome-hero-card">
-        <div class="welcome-icon">👋</div>
-        <h2>Welcome to SyllabusAI</h2>
-        <p>I'm your autonomous academic agent. Ask me anything about your course materials, request code implementations, or explore concepts with grounded syllabus citations.</p>
-        <div class="quick-actions" id="quick-actions">
-          <span class="quick-actions-label">Quick Actions:</span>
-          <button class="quick-action-btn" data-action="explain">📖 Explain Concept</button>
-          <button class="quick-action-btn" data-action="code">💻 Write Code</button>
-          <button class="quick-action-btn" data-action="quiz">📝 Generate Quiz</button>
-          <button class="quick-action-btn" data-action="podcast">🎙️ Podcast</button>
-        </div>
-      </div>
-    `;
-    this.attachQuickActionListeners();
-    this.scrollToBottom();
-  }
-
-  loadSession(sessionId) {
-    const session = this.sessions.find(s => s.id === sessionId);
-    if (!session) return;
-    
-    this.activeSessionId = sessionId;
-    this.chatHistory = session.messages || [];
-    this.renderSessionList();
-    
-    // Re-render chat messages
-    this.chatMessages.innerHTML = '';
-    if (this.chatHistory.length === 0) {
-      this.createNewSession();
-      return;
-    }
-
-    this.chatHistory.forEach(msg => {
-      this.appendMessageElement(msg.role, msg.content, msg.citations || [], false);
-    });
-    this.scrollToBottom();
-    this.renderMath();
-  }
-
-  deleteSession(sessionId) {
-    if (!confirm('Delete this conversation?')) return;
-    this.sessions = this.sessions.filter(s => s.id !== sessionId);
-    if (this.activeSessionId === sessionId) {
-      this.createNewSession();
-    }
-    this.saveSessions();
-    this.renderSessionList();
-  }
-
   renderMarkdown(text) {
     if (!text) return '';
     let parsed = this.escapeHtml(text);
@@ -1971,11 +1875,25 @@ class SyllabusApp {
       let optionsHtml = '';
 
       if (qType === 'MCQ' && q.options) {
+        // Normalize options: the backend sends an ARRAY like ["A. text", "B. text"].
+        // Object.entries() on an array yields numeric indices (0,1,2...) which
+        // broke answer selection and grading. Extract the real letter labels.
+        let entries = [];
+        if (Array.isArray(q.options)) {
+          entries = q.options.map((v, i) => {
+            const s = String(v);
+            const m = s.match(/^\(?([A-Da-d])[\.\)\:]\s*(.+)$/);
+            return m ? [m[1].toUpperCase(), m[2]] : [String.fromCharCode(65 + i), s];
+          });
+        } else if (q.options && typeof q.options === 'object') {
+          entries = Object.entries(q.options);
+        }
+
         optionsHtml = `
           <div class="options-list" data-qid="${q.id}">
-            ${Object.entries(q.options).map(([k, v]) => `
+            ${entries.map(([k, v]) => `
               <div class="option-item" data-opt="${k}">
-                <strong>(${k})</strong> ${this.escapeHtml(v)}
+                <strong>(${k})</strong> ${this.escapeHtml(String(v))}
               </div>
             `).join('')}
           </div>
@@ -2012,11 +1930,20 @@ class SyllabusApp {
   async submitQuiz() {
     if (!this.activeQuiz) return;
     const userAnswers = {};
+    let answeredCount = 0;
     this.quizContainer.querySelectorAll('.options-list').forEach(list => {
       const qid = parseInt(list.dataset.qid);
       const selected = list.querySelector('.option-item.selected');
-      if (selected) userAnswers[qid] = selected.dataset.opt;
+      if (selected) {
+        userAnswers[qid] = selected.dataset.opt;
+        answeredCount++;
+      }
     });
+
+    if (answeredCount < this.activeQuiz.length) {
+      const unanswered = this.activeQuiz.length - answeredCount;
+      if (!confirm(`${unanswered} question(s) are still unanswered. Submit anyway?`)) return;
+    }
 
     try {
       const res = await fetch('/api/quiz/submit', {
@@ -2100,12 +2027,23 @@ class SyllabusApp {
       const res = await fetch('/api/flashcards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, num_cards: 6 })
+        body: JSON.stringify({ topic, num_cards: 6, filter_source: this.chatDocFilter?.value || 'All Documents' })
       });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
+      if (!data.flashcards || data.flashcards.length === 0) {
+        this.flashcardsContainer.innerHTML = `
+          <div class="empty-state-card">
+            <div class="empty-icon-glow">📭</div>
+            <h3>No Flashcards Generated</h3>
+            <p>Upload course documents in the Document Hub first, or try a different topic.</p>
+          </div>`;
+        return;
+      }
       this.renderFlashcards(data.flashcards);
-    } catch {
-      this.flashcardsContainer.innerHTML = '<div class="empty-state-card"><p>Failed to generate cards.</p></div>';
+    } catch (err) {
+      console.error('Flashcard generation failed:', err);
+      this.flashcardsContainer.innerHTML = '<div class="empty-state-card"><p style="color:#ef4444;">⚠️ Failed to generate flashcards. Check that the server is running.</p></div>';
     }
   }
 
@@ -2120,25 +2058,16 @@ class SyllabusApp {
       wrap.innerHTML = `
         <div class="flashcard-item-header">
           <span class="flashcard-number">Card ${idx + 1}</span>
-          <span class="flashcard-source-tag">${c.source_doc || 'Course Material'}, Page ${c.source_page || '-'}</span>
+          <span class="flashcard-source-tag">${this.escapeHtml(c.source_doc || 'Course Material')}, Page ${c.source_page || '-'}</span>
         </div>
         <div class="flashcard-front">
           <div class="flashcard-label">QUESTION</div>
-          <p>${this.escapeHtml(c.front)}</p>
-        </div>
-        <div class="flashcard-rating-stars" style="margin-top: 12px; opacity: 0.6;">
-          <button class="star-btn" data-rating="1">⬜</button>
-          <button class="star-btn" data-rating="2">⬜</button>
-          <button class="star-btn" data-rating="3">⬜</button>
-          <button class="star-btn" data-rating="4">⬜</button>
-          <button class="star-btn" data-rating="5">⬜</button>
+          <p>${this.escapeHtml(c.front || '')}</p>
+          <div class="flashcard-label" style="margin-top:10px;">Click to Review →</div>
         </div>
       `;
 
-      wrap.addEventListener('click', (e) => {
-        if (e.target.closest('.star-btn')) return; // Let star handler deal with it
-        this.showFlashcardDetail(c);
-      });
+      wrap.addEventListener('click', () => this.showFlashcardDetail(c));
 
       this.flashcardsContainer.appendChild(wrap);
     });
