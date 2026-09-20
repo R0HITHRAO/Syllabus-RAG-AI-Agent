@@ -304,7 +304,7 @@ code, pre, .mono, kbd {
   flex-direction: column;
   height: 100vh;
   position: relative;
-  background-color: var(--bg-base);
+  background-color: transparent;
   z-index: 1;
 }
 
@@ -1671,8 +1671,15 @@ button.prompt-chip:active, .prompt-chip:active {
   height: 100%;
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   transform-style: preserve-3d;
-  will-change: transform;
   cursor: pointer;
+  /* CRISP GUARD: `will-change` is intentionally NOT set at rest — a permanent
+     hint keeps every card in a composited layer and softens its text. It is
+     applied only while a flip can actually happen (hover / mid-flip). */
+  will-change: auto;
+}
+.flashcard-wrapper:hover .flashcard-inner,
+.flashcard-wrapper.flipped .flashcard-inner {
+  will-change: transform;
 }
 .flashcard-wrapper.flipped .flashcard-inner {
   transform: rotateY(180deg);

@@ -18,16 +18,13 @@
   height: 100% !important;
 }
 
-/* ── 3D Glare Overlay on Cards ──────────────────────────────────────────── */
-.card-3d-glare {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 2;
-}
+/* ── 3D Glare Overlay on Cards ──────────────────────────────────────────────
+   NOTE: `.card-3d-glare` is intentionally NOT defined here any more.
+   three-scene.js used to inject one of these per card alongside its own tilt
+   engine. Tilt is now owned solely by motion.js, which injects a single
+   `.tilt-glare` layer (styled in cinema.css) and drives it with --gx/--gy.
+   Keeping a second, never-opacity-switched overlay meant an extra absolutely
+   positioned composited layer per card for nothing. */
 
 /* ── Tab Slider Pill ────────────────────────────────────────────────────── */
 .tabs-nav-bar {
@@ -49,7 +46,9 @@
   pointer-events: none;
   z-index: 0;
   transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  backdrop-filter: blur(12px);
+  /* NO backdrop-filter on this pill: it animates `left`/`width` continuously,
+     and a backdrop filter must re-sample the backdrop on every frame of that
+     transition → guaranteed stutter on every tab change. */
 }
 
 /* Ensure tab buttons sit above pill */
@@ -61,17 +60,18 @@
 /* ── 3D Directional Slide Keyframes ─────────────────────────────────────── */
 
 /* Enter from right (forward navigation) */
+/* NOTE: no `filter: blur()` in these keyframes and no Z-axis translation —
+   both force the pane into a resampled texture layer. Motion is pure
+   opacity + translate + tiny rotate, which stays crisp and ends at identity. */
 @keyframes slideEnterRight {
   0% {
     opacity: 0;
-    transform: translate3d(60px, 0, -100px) rotateY(-12deg) scale(0.94);
-    filter: blur(4px);
+    transform: translate3d(46px, 0, 0) rotateY(-7deg) scale(0.99);
   }
 
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-    filter: blur(0px);
   }
 }
 
@@ -79,14 +79,12 @@
 @keyframes slideEnterLeft {
   0% {
     opacity: 0;
-    transform: translate3d(-60px, 0, -100px) rotateY(12deg) scale(0.94);
-    filter: blur(4px);
+    transform: translate3d(-46px, 0, 0) rotateY(7deg) scale(0.99);
   }
 
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
-    filter: blur(0px);
   }
 }
 
@@ -120,12 +118,18 @@
   }
 }
 
-/* ── Tab Pane 3D Stage ───────────────────────────────────────────────────── */
+/* ── Tab Pane Stage ─────────────────────────────────────────────────────────
+   CRITICAL BLUR GUARD: a pane must never REST in a 3D/composited state.
+   A permanent `perspective` + `preserve-3d` + `will-change: transform` promotes
+   the whole app (chat, quiz, flashcards, every glyph) into a GPU texture that the
+   compositor then resamples — this disables subpixel text antialiasing and makes
+   ALL text look soft/blurry, worse the more content is rendered.
+   The cinematic depth look is applied per-animation and fully released after. */
 .tab-pane {
-  perspective: 1400px;
+  perspective: none;
   perspective-origin: 50% 50%;
-  transform-style: preserve-3d;
-  will-change: transform, opacity;
+  transform-style: flat;
+  will-change: auto;
 }
 
 .tab-pane.slide-enter-right {
