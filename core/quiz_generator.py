@@ -126,8 +126,8 @@ class QuizGenerator:
                 "correct_answer": correct_choice,
                 "is_correct": is_correct,
                 "explanation": q.get("explanation", ""),
-                "source_doc": q.get("source_doc", "Syllabus"),
-                "source_page": q.get("source_page", 1)
+                "source_doc": q.get("source_doc") or q.get("source", "Syllabus"),
+                "source_page": q.get("source_page", q.get("page", 1))
             })
 
         percentage = round((correct_count / total * 100), 1) if total > 0 else 0.0
