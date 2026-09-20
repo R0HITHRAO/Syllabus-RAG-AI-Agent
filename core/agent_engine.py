@@ -2,6 +2,7 @@ import os
 import re
 import json
 import time
+import asyncio
 from typing import List, Dict, Any, Optional, Generator
 from core.config import (
     PERSONA_PROMPTS,
@@ -53,7 +54,7 @@ class AIAgentEngine:
                     "done": (i == len(words) - 1)
                 }
                 yield f"data: {json.dumps(payload)}\n\n"
-                time.sleep(0.015) # Smooth typewriter pacing
+                asyncio.sleep(0.015) # Smooth typewriter pacing
             return
 
         # 2. Hybrid Search in Vector Store
@@ -129,12 +130,18 @@ class AIAgentEngine:
                 print(f"[AgentEngine] Streaming API notice: {e}")
 
         # 6. Built-in Offline Token Streamer
-        full_text = self._builtin_generative_reasoner(question, context_str, persona)
+        full_text = self._generate_response(
+            question=question,
+            context_str=context_str,
+            system_prompt="",
+            mode="agent",
+            persona=persona
+        )
         tokens = re.split(r'(\s+)', full_text)
         for i, tok in enumerate(tokens):
             is_last = (i == len(tokens) - 1)
             yield f"data: {json.dumps({'token': tok, 'citations': citations, 'done': is_last})}\n\n"
-            time.sleep(0.01)
+            asyncio.sleep(0.01)
 
     def query(
         self,
