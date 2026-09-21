@@ -736,4 +736,230 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+/* ==========================================================================
+   v1.1 — SETTINGS MODAL, HEADER BAR & BOX ALIGNMENT FIXES
+   Targets the actual class names used in index.html
+   ========================================================================== */
+
+/* --- A. Settings Modal (id: settings-modal / .modal-backdrop / .modal-dialog-box) --- */
+
+#settings-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  background: rgba(2, 4, 10, 0.78) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+#settings-modal .modal-dialog-box {
+  width: 100% !important;
+  max-width: 460px !important;
+  max-height: calc(100vh - 40px) !important;
+  overflow-y: auto !important;
+  padding: 0 !important; /* padding handled per-section for perfect alignment */
+  border-radius: 18px !important;
+  border: 1px solid var(--border-subtle) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  animation: settingsModalIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes settingsModalIn {
+  from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header bar inside the modal — previously had ZERO styling */
+.modal-header-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 18px 22px 14px 22px !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  flex-shrink: 0 !important;
+}
+
+.modal-header-bar h3 {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+}
+
+.modal-header-bar .icon-btn {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Body content — previously had ZERO styling (fields were squashed together) */
+.modal-body-content {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+  padding: 22px !important;
+}
+
+.form-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  margin: 0 !important; /* overrides legacy 14px bottom margin */
+  width: 100% !important;
+}
+
+.form-field label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: var(--text-secondary) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.field-hint {
+  font-size: 11.5px !important;
+  color: var(--text-muted) !important;
+  line-height: 1.45 !important;
+  margin-top: 2px !important;
+}
+
+/* Inputs inside the settings modal fill the row and align perfectly */
+#settings-modal .modern-input,
+#settings-modal .modern-select {
+  width: 100% !important;
+  padding: 10px 12px !important;
+  font-size: 13.5px !important;
+  color: var(--text-main) !important;
+  border-radius: 10px !important;
+}
+
+/* Save button spans the full modal width, aligned below the last field */
+#btn-save-settings {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  margin-top: 4px !important;
+  border-radius: 12px !important;
+}
+
+/* --- B. Header Controls Bar (theme / mode / persona / settings cluster) --- */
+
+.header-controls {
+  flex-wrap: nowrap !important;
+  flex-shrink: 1 !important;
+  min-width: 0 !important;
+  gap: 8px !important;
+}
+
+.header-controls .control-pill-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 5px 10px !important;
+  border-radius: 10px !important;
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  min-width: 0 !important;
+  flex-shrink: 1 !important;
+}
+
+.header-controls .control-pill-icon {
+  font-size: 14px !important;
+  line-height: 1 !important;
+  flex-shrink: 0 !important;
+}
+
+.header-controls .nav-select {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  padding: 2px 4px !important;
+  min-width: 0 !important;
+  max-width: 170px !important;
+  cursor: pointer !important;
+}
+
+/* Segmented AI Agent / Strict Exam toggle stays on one line */
+.mode-segmented-control {
+  flex-shrink: 0 !important;
+}
+
+.mode-seg-btn {
+  white-space: nowrap !important;
+  font-size: 12.5px !important;
+}
+
+/* Icon buttons in the header align with the pill row */
+.header-controls .icon-btn {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px !important;
+}
+
+/* --- C. Chat Box Alignment (actual classes used in markup) --- */
+
+/* Command bar card: centered under the chat with balanced width */
+.chat-command-wrapper {
+  width: 100% !important;
+  max-width: 880px !important;
+  margin: 0 auto !important;
+  padding: 8px 24px 16px 24px !important;
+}
+
+.command-bar-card {
+  width: 100% !important;
+  border-radius: 16px !important;
+}
+
+/* Message bubbles: correct alignment for agent (left) and user (right) */
+.message-bubble {
+  max-width: min(860px, 92%) !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+
+.message-bubble .message-content {
+  min-width: 0 !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Citation pills wrap cleanly instead of overflowing the box */
+.citations-box {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.citations-box .citations-title {
+  width: 100% !important;
+}
+
+/* Quick-action pills row aligns inside the bubble */
+.quick-actions-bar {
+  flex-wrap: wrap !important;
+}
+
 /* END OF FIXES */

@@ -1580,6 +1580,13 @@ class SyllabusApp {
     this.isStreaming = true;
 
     try {
+      // Fail fast with an actionable message when the page isn't served by the
+      // backend (e.g. index.html opened directly from disk) — fetch('/api/...')
+      // can never succeed under file:// protocol.
+      if (window.location.protocol === 'file:') {
+        throw Object.assign(new Error('You opened index.html directly from disk. Start the backend with "python server.py" and open http://localhost:8000 so the AI API is reachable.'), { friendly: true });
+      }
+
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1591,6 +1598,19 @@ class SyllabusApp {
           chat_history: activeSess.messages.map(m => ({ role: m.role, content: m.content }))
         })
       });
+
+      // Surface server-side errors (invalid API key, quota exceeded, 500s)
+      // instead of silently parsing an HTML/JSON error body as an SSE stream.
+      if (!response.ok || !response.body) {
+        let detail = `Server responded with status ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData?.detail) {
+            detail = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } catch { /* non-JSON error body — keep the status-code message */ }
+        throw Object.assign(new Error(detail), { friendly: true });
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -1648,7 +1668,18 @@ class SyllabusApp {
       }
 
       if (pendingRender) { clearTimeout(pendingRender); pendingRender = null; }
-      contentEl.innerHTML = this.renderMarkdown(fullAgentText);
+
+      if (!fullAgentText.trim()) {
+        // Stream ended cleanly but produced no tokens — almost always an API
+        // key / quota / upstream-model problem rather than a network failure.
+        contentEl.innerHTML = `
+          <div style="color:#f59e0b; line-height:1.6;">
+            ⚠️ <strong>The agent returned an empty response.</strong><br>
+            <small>Please verify your Gemini API key in ⚙️ <strong>Settings</strong>, check your API quota, and try again. The backend may also have rejected the model request — see the server console for details.</small>
+          </div>`;
+      } else {
+        contentEl.innerHTML = this.renderMarkdown(fullAgentText);
+      }
       
       if (collectedCitations.length > 0) {
         citationsContainer.style.display = 'block';
@@ -1683,8 +1714,14 @@ class SyllabusApp {
       this.renderMath();
 
     } catch (err) {
-      console.error(err);
-      contentEl.innerHTML = '<span style="color:#ef4444;">⚠️ Network error communicating with agent.</span>';
+      console.error('Chat error:', err);
+      const reason = err?.message || 'Unknown network error';
+      const hint = err?.friendly ? '' : '<br><small>If the backend is not running, start it with <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;">python server.py</code> and open <strong>http://localhost:8000</strong>.</small>';
+      contentEl.innerHTML = `
+        <div style="color:#ef4444; line-height:1.6;">
+          ⚠️ <strong>Could not reach the AI agent.</strong><br>
+          <small>${this.escapeHtml(reason)}</small>${hint}
+        </div>`;
     } finally {
       this.isStreaming = false;
       this.scrollToBottom();
