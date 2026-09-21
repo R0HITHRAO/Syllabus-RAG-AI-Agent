@@ -1,0 +1,554 @@
+/* ==========================================================================
+   POLISH LAYER v1.0 — World-Class UI/UX Finishing Pass
+   Loaded LAST so it wins the cascade. Targets only classes that exist
+   in index.html / app.js. Sections: Typography, Pixel Alignment,
+   Micro-interactions, Glitch Prevention, Responsive, Accessibility.
+   ========================================================================== */
+
+/* ----------------------------------------------------------
+   1. TYPOGRAPHY — crisp, balanced, professional text
+   ---------------------------------------------------------- */
+html {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-optical-sizing: auto;
+  font-kerning: normal;
+  letter-spacing: 0.01em;
+}
+
+/* Balanced, hyphen-free headings — no ugly single-word orphan lines */
+h1, h2, h3, h4, .hero-title, .welcome-title, .brand-title {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+p, .hero-subtitle, .welcome-desc, .field-hint {
+  text-wrap: pretty;
+}
+
+/* Numeric data aligns in columns — tables, stats, quiz scores */
+.tabular, .stat-value, .analytics-card, .weak-topic-score {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Uppercase micro-labels get consistent tracking */
+.sidebar-section-title,
+.citations-title,
+.form-field label,
+.command-bar-hint {
+  letter-spacing: 0.06em;
+}
+
+/* Keyboard hints styled like a design-system <kbd> */
+kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border-subtle);
+  border-bottom-width: 2px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.35);
+  color: #fff;
+}
+
+/* ----------------------------------------------------------
+   2. PIXEL ALIGNMENT — one consistent control system
+   ---------------------------------------------------------- */
+
+/* Every clickable control shares one motion curve — no mixed timings */
+button, select, input, textarea, a {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Header brand lockup: logo + text optically centered */
+.brand {
+  gap: 10px;
+  align-items: center;
+}
+
+.brand-title {
+  line-height: 1.1;
+  margin: 0;
+}
+
+.brand-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+/* Tab bar: equal-height buttons with centered content, no baseline drift */
+.tab-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1;
+  white-space: nowrap;
+  border-radius: 10px;
+}
+
+.tab-nav-btn .tab-icon {
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+}
+
+.tab-nav-btn .tab-label {
+  line-height: 1;
+  transform: translateY(0.5px); /* optical vertical centering */
+}
+
+/* Prompt chips: icon + two-line text block perfectly aligned */
+.prompt-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  border-radius: 14px;
+}
+
+.prompt-chip .chip-emoji,
+.prompt-chip .chip-glow-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.prompt-chip .chip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prompt-chip .chip-text strong {
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-chip .chip-text small {
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chat message layout: avatar and content on one clean grid */
+.message-bubble {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.message-bubble .message-avatar {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.message-bubble .message-header {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.message-bubble .message-body {
+  line-height: 1.65;
+  font-size: 14px;
+}
+
+/* Streaming cursor: solid, non-jittering caret */
+.typing-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 2px;
+  background: var(--accent-primary);
+  animation: cursorPulse 0.9s steps(2, start) infinite;
+}
+
+@keyframes cursorPulse {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
+}
+
+/* Code blocks inside answers: consistent padding + rounded corners */
+.message-body pre {
+  border-radius: 12px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  line-height: 1.55;
+}
+
+.message-body code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+}
+
+/* ----------------------------------------------------------
+   3. MICRO-INTERACTIONS — consistent, premium feel
+   ---------------------------------------------------------- */
+
+/* Uniform press feedback: everything dips 1px on click */
+button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+/* Icon buttons never stretch their SVGs */
+.icon-btn svg,
+.cmd-icon-btn svg,
+.icon-btn-sm svg {
+  pointer-events: none; /* clicks always hit the button, never the glyph */
+  flex-shrink: 0;
+}
+
+/* Cards lift once, softly — no double hover transforms */
+.glass-surface,
+.command-bar-card,
+.welcome-hero-card {
+  will-change: auto; /* avoid permanent GPU layers = memory waste */
+}
+
+/* Focus rings: visible for keyboard users only (flagship a11y standard) */
+:focus { outline: none; }
+
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.tab-nav-btn:focus-visible,
+.icon-btn:focus-visible,
+.prompt-chip:focus-visible,
+.quick-action-pill:focus-visible,
+.cmd-send-btn:focus-visible {
+  outline-offset: 3px;
+}
+
+/* Disabled = clearly unavailable, still readable */
+button:disabled,
+select:disabled,
+input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: saturate(0.6);
+}
+
+/* Selects get a custom subtle caret instead of the OS default */
+select.nav-select,
+select.modern-select,
+select.source-select,
+select.lang-select-pill {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px !important;
+}
+
+/* ----------------------------------------------------------
+   4. GLITCH PREVENTION — zero visual jumps
+   ---------------------------------------------------------- */
+
+/* Images & media never overflow their containers */
+img, svg, video, canvas {
+  max-width: 100%;
+}
+
+.message-body img {
+  border-radius: 10px;
+}
+
+/* Markdown tables in answers: scroll horizontally inside the bubble */
+.message-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  border-radius: 10px;
+}
+
+.message-body th,
+.message-body td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Long URLs / tokens never break the layout */
+.message-body, .turn-spoken-text, .session-title {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Horizontal scrollbars never appear on the app shell */
+html, body {
+  overflow-x: hidden;
+}
+
+.app-container,
+.workspace-layout,
+.main-content {
+  max-width: 100vw;
+}
+
+/* Smooth, consistent scrollbars everywhere (not just chat) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* Chat container: momentum scroll + overscroll containment */
+.chat-messages, .canvas-body-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Sidebar session titles truncate with an ellipsis, never wrap ugly */
+.session-item {
+  align-items: center;
+  gap: 8px;
+}
+
+.session-item .session-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-item .session-delete-btn {
+  opacity: 0; /* appears on hover only — cleaner list */
+  transition: opacity 0.15s ease;
+}
+
+.session-item:hover .session-delete-btn,
+.session-item.active .session-delete-btn {
+  opacity: 1;
+}
+
+/* ----------------------------------------------------------
+   5. RESPONSIVE — graceful at every width
+   ---------------------------------------------------------- */
+
+/* ≤1200px: header controls compress but stay on one row */
+@media (max-width: 1200px) {
+  .header-controls .nav-select {
+    max-width: 120px;
+  }
+
+  .mode-seg-btn .seg-icon {
+    display: none; /* icons drop first, labels stay readable */
+  }
+}
+
+/* ≤1024px: canvas studio overlays content instead of squeezing chat */
+@media (max-width: 1024px) {
+  .canvas-studio:not(.collapsed) {
+    position: fixed;
+    top: 76px;
+    right: 0;
+    bottom: 0;
+    width: min(420px, 90vw);
+    z-index: 800;
+    box-shadow: var(--elevated-shadow);
+  }
+}
+
+/* ≤900px: controls wrap onto a second header row, neatly aligned */
+@media (max-width: 900px) {
+  .app-header {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding-bottom: 10px;
+  }
+
+  .header-controls {
+    order: 3;
+    width: 100%;
+    flex-wrap: wrap !important;
+    justify-content: flex-end;
+  }
+
+  .header-controls .nav-select {
+    max-width: 150px;
+  }
+}
+
+/* ≤720px: full mobile pass */
+@media (max-width: 720px) {
+  .brand-badge { display: none; }
+
+  .chat-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(300px, 85vw);
+    z-index: 850;
+    box-shadow: var(--elevated-shadow);
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .chat-sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+
+  .message-bubble {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    max-width: 100% !important;
+  }
+
+  .message-bubble .message-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .hero-prompts-grid,
+  .prompt-discovery-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .chat-command-wrapper {
+    padding: 8px 12px 12px 12px !important;
+  }
+
+  .command-bar-hint {
+    display: none; /* kbd hints are useless on touch screens */
+  }
+
+  .quick-actions-bar {
+    gap: 6px;
+  }
+
+  .quick-action-pill {
+    font-size: 11.5px;
+    padding: 6px 10px;
+  }
+
+  .modal-dialog-box {
+    max-width: 100% !important;
+  }
+
+  #settings-modal {
+    padding: 12px !important;
+  }
+}
+
+/* ≥1600px: ultra-wide — cap content width for comfortable reading */
+@media (min-width: 1600px) {
+  .chat-messages,
+  .chat-command-wrapper {
+    max-width: 980px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ----------------------------------------------------------
+   6. ACCESSIBILITY — respects user settings
+   ---------------------------------------------------------- */
+
+/* Users who disable animations get an instant, calm UI */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .typing-cursor {
+    animation: none !important;
+    opacity: 0.6;
+  }
+}
+
+/* High-contrast preference: strengthen borders & text */
+@media (prefers-contrast: more) {
+  .glass-surface,
+  .command-bar-card,
+  .modal-dialog-box,
+  .message-bubble .message-content {
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .text-muted, .field-hint, .command-bar-hint {
+    color: var(--text-secondary) !important;
+  }
+}
+
+/* Print: chat transcripts come out clean */
+@media print {
+  .app-header, .chat-sidebar, .chat-command-wrapper, .canvas-studio,
+  .three-canvas-container, .ambient-glow-mesh, .quick-actions-bar {
+    display: none !important;
+  }
+
+  .chat-messages {
+    overflow: visible !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+
+/* ============ END OF POLISH LAYER v1.0 ============ */
+
+
