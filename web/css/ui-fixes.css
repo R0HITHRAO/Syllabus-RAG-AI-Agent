@@ -1,0 +1,739 @@
+/* ==========================================================================
+   WEBSITE UI/UX FIX - Comprehensive Alignment & Glitch Corrections
+   Fixes all visual issues, alignment problems, and glitches
+   ========================================================================== */
+
+/* --- CRITICAL FIXES --- */
+
+/* 1. Fix Header Alignment Issues */
+.app-header {
+  height: 64px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 50;
+  position: relative;
+  flex-shrink: 0;
+  min-height: 64px; /* Prevent collapse */
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+  justify-content: flex-end;
+}
+
+/* 2. Fix Control Pills Alignment */
+.control-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 6px 12px; /* Increased padding for better spacing */
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap; /* Prevent text wrapping */
+  height: 36px; /* Fixed height for consistency */
+}
+
+.control-pill-group:hover,
+.control-pill-group:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.control-pill-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* 3. Fix Mode Segmented Control */
+.mode-segmented-control {
+  display: flex;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 3px;
+  height: 36px; /* Fixed height */
+  align-items: center;
+}
+
+.mode-seg-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  height: 28px; /* Fixed inner height */
+  line-height: 1;
+}
+
+.mode-seg-btn.active {
+  background: var(--gradient-brand);
+  color: #ffffff;
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.45);
+}
+
+.seg-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* 4. Fix Icon Buttons Alignment */
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px; /* Prevent shrinking */
+  min-height: 36px;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-main);
+  background: var(--bg-secondary);
+  transform: translateY(-1px);
+}
+
+/* 5. Fix Brand Logo Alignment */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.brand-logo-wrap {
+  position: relative;
+  width: 36px;
+  height: 36px;
+}
+
+.brand-logo {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: var(--glow-primary);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1;
+}
+
+.brand-logo-glow {
+  position: absolute;
+  inset: -3px;
+  background: var(--gradient-brand);
+  border-radius: 12px;
+  filter: blur(10px);
+  opacity: 0.6;
+  z-index: 0;
+}
+
+.brand-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-title {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 0;
+}
+
+.brand-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--accent-cyan);
+  border: 1px solid var(--border-subtle);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  height: fit-content;
+}
+
+/* 6. Fix Tabs Navigation Bar */
+.tabs-nav-container {
+  background: var(--bg-glass);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+}
+
+.tabs-nav-bar {
+  display: flex;
+  gap: 4px;
+  position: relative;
+  min-width: max-content; /* Prevent collapsing */
+  align-items: center;
+}
+
+.tab-nav-btn {
+  position: relative;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2;
+  white-space: nowrap;
+  height: 40px; /* Fixed height */
+  line-height: 1;
+}
+
+.tab-nav-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-secondary);
+  border-color: var(--border-subtle);
+}
+
+.tab-nav-btn.active {
+  color: var(--text-main);
+  background: var(--bg-glass-elevated);
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.25);
+}
+
+.tab-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tab-label {
+  line-height: 1;
+}
+
+/* 7. Fix Chat Messages Container */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+
+/* 8. Fix Message Bubbles Alignment */
+.message-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 85%;
+  animation: messagePopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.message-bubble.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.message-bubble.assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.bubble-content {
+  padding: 14px 18px;
+  border-radius: 16px;
+  word-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+.message-bubble.user .bubble-content {
+  background: var(--gradient-user);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+}
+
+.message-bubble.assistant .bubble-content {
+  background: var(--bg-glass-card);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  border-bottom-left-radius: 4px;
+  box-shadow: var(--card-shadow);
+}
+
+/* 9. Fix Input Area Alignment */
+.chat-input-area {
+  padding: 20px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 12px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-size: 14px;
+  outline: none;
+  resize: none;
+  min-height: 24px;
+  max-height: 120px;
+  line-height: 1.5;
+  padding: 0;
+}
+
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--gradient-brand);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
+}
+
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 10. Fix Sidebar Alignment */
+.chat-sidebar {
+  width: 280px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.chat-sidebar.collapsed {
+  transform: translateX(-100%);
+  width: 0;
+}
+
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.new-chat-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--gradient-brand);
+  border: none;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.new-chat-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
+}
+
+/* 11. Fix Workspace Layout */
+.workspace-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0; /* Allow flex shrinking */
+}
+
+/* 12. Fix Tab Panes */
+.tab-pane {
+  display: none;
+  flex: 1;
+  overflow: hidden;
+  animation: tabFadeSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tab-pane.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 13. Fix Welcome Hero Card */
+.welcome-hero-card {
+  background: var(--bg-glass-elevated);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 24px;
+  box-shadow: var(--elevated-shadow);
+  text-align: center;
+}
+
+.hero-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 16px 0;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto 24px;
+}
+
+/* 14. Fix Prompt Chips Grid */
+.hero-prompts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.prompt-chip {
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+
+.prompt-chip:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
+}
+
+.chip-emoji {
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* 15. Fix Responsive Issues */
+@media (max-width: 1024px) {
+  .header-controls {
+    gap: 6px;
+  }
+
+  .control-pill-group {
+    padding: 5px 10px;
+  }
+
+  .tab-nav-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 12px;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  .brand-title {
+    font-size: 15px;
+  }
+
+  .brand-badge {
+    display: none; /* Hide on mobile */
+  }
+
+  .control-pill-group .nav-select {
+    max-width: 120px;
+  }
+
+  .chat-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+  }
+
+  .hero-prompts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 16. Fix Scrollbar Issues */
+.chat-messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* 17. Fix Text Selection */
+::selection {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+/* 18. Fix Focus Outlines */
+*:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* 19. Fix Persona Group Specific Width */
+.persona-group {
+  min-width: 180px;
+}
+
+.persona-group .nav-select {
+  min-width: 150px;
+}
+
+/* 20. Fix Badge Positioning */
+.count-pill,
+.pulse-chip,
+.session-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  height: 18px;
+}
+
+.count-pill {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+.pulse-chip {
+  background: var(--accent-rose);
+  color: #ffffff;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 21. Fix Hero Sparkle Pill */
+.hero-sparkle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.sparkle-star {
+  font-size: 14px;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.8;
+  }
+}
+
+/* 22. Fix Three.js Canvas Container */
+.three-canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* 23. Fix Loading States */
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 24. Fix Overflow Issues */
+.app-container {
+  overflow: hidden;
+}
+
+.workspace-layout {
+  overflow: hidden;
+}
+
+.main-content {
+  overflow: hidden;
+}
+
+/* 25. Prevent Text Overflow */
+.tab-label,
+.brand-title,
+.nav-select,
+.mode-seg-btn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* END OF FIXES */
