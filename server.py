@@ -1,8 +1,10 @@
 import sys
 import os
 import shutil
+import logging
 from pathlib import Path
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 
 # Ensure UTF-8 output
 if hasattr(sys.stdout, 'reconfigure'):
@@ -10,6 +12,17 @@ if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
     except Exception:
         pass
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('syllabus_rag.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -57,21 +70,32 @@ WEB_DIR.mkdir(parents=True, exist_ok=True)
 (WEB_DIR / "js").mkdir(parents=True, exist_ok=True)
 
 # Initialize Core Services
-vector_store = AcademicVectorStore()
-agent_engine = AIAgentEngine(vector_store)
-quiz_gen = QuizGenerator(vector_store)
-analyzer = SyllabusAnalyzer(vector_store)
-podcast_gen = AudioPodcastGenerator(vector_store)
-graph_gen = KnowledgeGraphGenerator(vector_store)
-analytics_engine = AnalyticsEngine(vector_store)
+try:
+    logger.info("Initializing core services...")
+    vector_store = AcademicVectorStore()
+    agent_engine = AIAgentEngine(vector_store)
+    quiz_gen = QuizGenerator(vector_store)
+    analyzer = SyllabusAnalyzer(vector_store)
+    podcast_gen = AudioPodcastGenerator(vector_store)
+    graph_gen = KnowledgeGraphGenerator(vector_store)
+    analytics_engine = AnalyticsEngine(vector_store)
+    logger.info("Core services initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize core services: {e}")
+    raise
 
 # Preload sample data if empty
-sample_file = SAMPLE_DATA_DIR / "operating_systems_sample.txt"
-if len(vector_store.chunks) == 0 and sample_file.exists():
-    pages = DocumentLoader.load_txt(sample_file)
-    splitter = AcademicTextSplitter()
-    chunks = splitter.split_documents(pages)
-    vector_store.add_chunks(chunks)
+try:
+    sample_file = SAMPLE_DATA_DIR / "operating_systems_sample.txt"
+    if len(vector_store.chunks) == 0 and sample_file.exists():
+        logger.info(f"Loading sample data from {sample_file}")
+        pages = DocumentLoader.load_txt(sample_file)
+        splitter = AcademicTextSplitter()
+        chunks = splitter.split_documents(pages)
+        vector_store.add_chunks(chunks)
+        logger.info(f"Sample data loaded: {len(chunks)} chunks indexed")
+except Exception as e:
+    logger.warning(f"Failed to load sample data: {e}")
 
 # ---------------------------------------------------------
 # Request Models
@@ -107,6 +131,7 @@ class FlashcardRequest(BaseModel):
     filter_source: Optional[str] = None
 
 import subprocess
+from subprocess import TimeoutExpired
 import time
 
 class CodeRunRequest(BaseModel):
@@ -129,15 +154,22 @@ class ApiKeyRequest(BaseModel):
 # ---------------------------------------------------------
 @app.get("/api/status")
 async def get_system_status():
-    docs = vector_store.get_all_documents()
-    return {
-        "status": "online",
-        "total_documents": len(docs),
-        "total_chunks": len(vector_store.chunks),
-        "documents": docs,
-        "has_api_key": bool(vector_store.api_key),
-        "active_model": agent_engine.model_name
-    }
+    """Health check endpoint with system status."""
+    try:
+        docs = vector_store.get_all_documents()
+        return {
+            "status": "online",
+            "timestamp": datetime.now().isoformat(),
+            "total_documents": len(docs),
+            "total_chunks": len(vector_store.chunks),
+            "documents": docs,
+            "has_api_key": bool(vector_store.api_key),
+            "active_model": agent_engine.model_name,
+            "version": "2.5.0"
+        }
+    except Exception as e:
+        logger.error(f"Status check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"System status check failed: {str(e)}")
 
 @app.get("/api/agent/personas")
 async def get_personas():
@@ -162,27 +194,69 @@ async def update_api_key(req: ApiKeyRequest):
 
 @app.post("/api/upload")
 async def upload_documents(files: List[UploadFile] = File(...)):
+    """Upload and index course documents with comprehensive error handling."""
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
     splitter = AcademicTextSplitter()
     total_added_chunks = 0
     saved_files = []
+    failed_files = []
 
     for file in files:
-        file_path = UPLOAD_DIR / file.filename
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        pages = DocumentLoader.load_document(file_path)
-        chunks = splitter.split_documents(pages)
-        vector_store.add_chunks(chunks)
-        total_added_chunks += len(chunks)
-        saved_files.append(file.filename)
+        try:
+            # Validate file size (max 50MB)
+            file.file.seek(0, 2)  # Seek to end
+            file_size = file.file.tell()
+            file.file.seek(0)  # Reset to beginning
 
-    return {
+            if file_size > 50 * 1024 * 1024:  # 50MB
+                logger.warning(f"File {file.filename} exceeds 50MB limit")
+                failed_files.append({"filename": file.filename, "reason": "File size exceeds 50MB limit"})
+                continue
+
+            # Validate file extension
+            allowed_extensions = {'.pdf', '.docx', '.doc', '.pptx', '.ppt', '.txt', '.md', '.markdown'}
+            file_ext = Path(file.filename).suffix.lower()
+            if file_ext not in allowed_extensions:
+                logger.warning(f"File {file.filename} has unsupported extension: {file_ext}")
+                failed_files.append({"filename": file.filename, "reason": f"Unsupported file type: {file_ext}"})
+                continue
+
+            file_path = UPLOAD_DIR / file.filename
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            logger.info(f"Processing document: {file.filename}")
+            pages = DocumentLoader.load_document(file_path)
+
+            if not pages:
+                logger.warning(f"No content extracted from {file.filename}")
+                failed_files.append({"filename": file.filename, "reason": "No content could be extracted"})
+                continue
+
+            chunks = splitter.split_documents(pages)
+            vector_store.add_chunks(chunks)
+            total_added_chunks += len(chunks)
+            saved_files.append(file.filename)
+            logger.info(f"Successfully indexed {file.filename}: {len(chunks)} chunks")
+
+        except Exception as e:
+            logger.error(f"Failed to process file {file.filename}: {e}")
+            failed_files.append({"filename": file.filename, "reason": str(e)})
+
+    response = {
         "message": f"Successfully processed and indexed {len(saved_files)} file(s)",
         "files": saved_files,
         "chunks_indexed": total_added_chunks,
         "total_chunks": len(vector_store.chunks)
     }
+
+    if failed_files:
+        response["failed_files"] = failed_files
+        response["message"] += f" ({len(failed_files)} file(s) failed)"
+
+    return response
 
 @app.post("/api/sample/load")
 async def load_sample_material():
@@ -216,16 +290,29 @@ async def clear_all_data():
 
 @app.post("/api/chat")
 async def chat_with_agent(req: ChatRequest):
-    filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
-    result = agent_engine.query(
-        question=req.query,
-        mode=req.mode,
-        persona=req.persona,
-        top_k=req.top_k,
-        filter_source=filter_val,
-        chat_history=req.chat_history
-    )
-    return result
+    """Chat with AI agent with comprehensive error handling."""
+    try:
+        if not req.query or not req.query.strip():
+            raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+        filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+
+        logger.info(f"Chat query: {req.query[:100]}... | Mode: {req.mode} | Persona: {req.persona}")
+
+        result = agent_engine.query(
+            question=req.query,
+            mode=req.mode,
+            persona=req.persona,
+            top_k=req.top_k,
+            filter_source=filter_val,
+            chat_history=req.chat_history
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Chat query failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process chat query: {str(e)}")
 
 @app.post("/api/chat/stream")
 async def chat_stream_with_agent(req: ChatRequest):
@@ -251,21 +338,39 @@ async def generate_podcast(req: PodcastRequest):
 
 @app.post("/api/quiz/generate")
 async def generate_quiz(req: QuizGenerateRequest):
-    filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
-    if req.quiz_type == "DESCRIPTIVE":
-        data = quiz_gen.generate_descriptive_quiz(
-            topic=req.topic,
-            num_questions=req.num_questions,
-            filter_source=filter_val
-        )
-    else:
-        data = quiz_gen.generate_mcq_quiz(
-            topic=req.topic,
-            num_questions=req.num_questions,
-            difficulty=req.difficulty,
-            filter_source=filter_val
-        )
-    return {"quiz": data, "type": req.quiz_type, "topic": req.topic}
+    """Generate quiz with validation and error handling."""
+    try:
+        if req.num_questions < 1 or req.num_questions > 50:
+            raise HTTPException(status_code=400, detail="Number of questions must be between 1 and 50")
+
+        filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+
+        logger.info(f"Generating quiz: {req.quiz_type} | Topic: {req.topic} | Questions: {req.num_questions}")
+
+        if req.quiz_type == "DESCRIPTIVE":
+            data = quiz_gen.generate_descriptive_quiz(
+                topic=req.topic,
+                num_questions=req.num_questions,
+                filter_source=filter_val
+            )
+        else:
+            data = quiz_gen.generate_mcq_quiz(
+                topic=req.topic,
+                num_questions=req.num_questions,
+                difficulty=req.difficulty,
+                filter_source=filter_val
+            )
+
+        if not data:
+            logger.warning(f"Quiz generation returned no questions for topic: {req.topic}")
+            raise HTTPException(status_code=404, detail="No content available to generate quiz. Please upload relevant documents.")
+
+        return {"quiz": data, "type": req.quiz_type, "topic": req.topic}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Quiz generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate quiz: {str(e)}")
 
 @app.post("/api/quiz/submit")
 async def submit_quiz(req: QuizSubmitRequest):
@@ -298,8 +403,14 @@ async def export_quiz_worksheet(req: QuizExportRequest):
         lines.append(q.get("question", ""))
         lines.append("")
         if req.quiz_type == "MCQ" and "options" in q:
-            for opt_key, opt_text in sorted(q["options"].items()):
-                lines.append(f"  [ ] **({opt_key})** {opt_text}")
+            options = q["options"]
+            # Handle both list format ["A. text", "B. text"] and dict format {"A": "text", "B": "text"}
+            if isinstance(options, list):
+                for opt in options:
+                    lines.append(f"  [ ] {opt}")
+            else:
+                for opt_key, opt_text in sorted(options.items()):
+                    lines.append(f"  [ ] **({opt_key})** {opt_text}")
         else:
             lines.append("*Your Answer:*")
             lines.append("\n" * 4)
@@ -311,10 +422,11 @@ async def export_quiz_worksheet(req: QuizExportRequest):
         lines.append("")
         for idx, q in enumerate(req.quiz, start=1):
             if req.quiz_type == "MCQ":
-                lines.append(f"**Q{idx}**: **Option ({q.get('correct_option', 'A')})** — *{q.get('explanation', '')}* (Source: {q.get('source', '')}, Page {q.get('page', '')})")
+                lines.append(f"**Q{idx}**: **Option ({q.get('correct_option', 'A')})** — *{q.get('explanation', '')}* (Source: {q.get('source_doc') or q.get('source', '')}, Page {q.get('source_page') or q.get('page', '')})")
             else:
                 lines.append(f"**Q{idx} Model Answer**: {q.get('model_answer', '')}")
-                lines.append(f"*Key Concepts*: {', '.join(q.get('key_concepts', []))} (Source: {q.get('source', '')}, Page {q.get('page', '')})")
+                key_concepts = q.get('key_concepts') or q.get('key_points') or []
+                lines.append(f"*Key Concepts*: {', '.join(key_concepts)} (Source: {q.get('source_doc') or q.get('source', '')}, Page {q.get('source_page') or q.get('page', '')})")
             lines.append("")
 
     return {"markdown": "\n".join(lines), "filename": f"{req.topic.replace(' ', '_')}_Exam_Worksheet.md"}
@@ -418,5 +530,34 @@ async def serve_index():
 
 if __name__ == "__main__":
     import uvicorn
-    print("[SERVER] Starting ChatGPT AI Agent & Syllabus RAG Web Server on http://localhost:8000 ...")
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
+
+    # Get port from environment or default to 8000
+    port = int(os.getenv("PORT", 8000))
+    host = os.getenv("HOST", "0.0.0.0")
+
+    try:
+        logger.info(f"Starting SyllabusRAG & ChatGPT AI Agent Platform")
+        logger.info(f"Server: http://{host}:{port}")
+        logger.info(f"Documents indexed: {len(vector_store.chunks)} chunks")
+        logger.info(f"API Key configured: {bool(vector_store.api_key)}")
+
+        uvicorn.run(
+            "server:app",
+            host=host,
+            port=port,
+            reload=False,
+            log_level="info",
+            access_log=True
+        )
+    except OSError as e:
+        if "address already in use" in str(e).lower():
+            logger.error(f"Port {port} is already in use. Please use a different port.")
+            logger.error(f"Try: PORT={port+1} python server.py")
+        else:
+            logger.error(f"Server startup failed: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        logger.info("Server shutdown requested by user")
+    except Exception as e:
+        logger.error(f"Unexpected error during server startup: {e}")
+        sys.exit(1)
