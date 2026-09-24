@@ -10,7 +10,7 @@
 
 **An ultra-modern, full-stack autonomous AI academic agent, grounded RAG retrieval engine, NotebookLM-style 2-host audio podcast synthesizer, split-screen live code execution studio, force-directed concept mind-map, and exam readiness analytics platform.**
 
-[Features](#-key-features) • [Architecture](#-system-architecture) • [Modules](#-application-modules) • [API Reference](#-api-endpoints) • [Quickstart](#-quickstart--installation)
+[Features](#-key-features) • [Architecture](#-system-architecture) • [Directory](#-project-directory-structure) • [API Reference](#-api-endpoints) • [Quickstart](#-quickstart--installation) • [Docker](#-docker-deployment) • [Testing](#-testing) • [Deployment](#-production-deployment)
 
 </div>
 
@@ -52,7 +52,7 @@
 flowchart TD
     subgraph DataEngine["1. Document Processing & Hybrid RAG Engine"]
         Docs["📂 Course Documents (PDF, PPTX, DOCX, TXT)"] --> Splitter["Academic Text Splitter"]
-        Splitter --> VectorDB["ChromaDB / Academic Vector Store"]
+        Splitter --> VectorDB["Gemini Embeddings / TF-IDF Vector Store"]
         Splitter --> BM25["BM25 Lexical Index"]
         VectorDB & BM25 --> RRF["Reciprocal Rank Fusion (RRF)"]
     end
@@ -84,18 +84,36 @@ flowchart TD
 ```
 Syllabus-RAG-AI-Agent/
 ├── server.py                        # FastAPI web server, REST API, & static router
+├── app.py                           # Production ASGI entrypoint (Render / Gunicorn / Uvicorn)
 ├── requirements.txt                 # Python dependencies
 ├── .env.example                     # API key template
 ├── README.md                        # Documentation
+├── DEPLOYMENT.md                    # Step-by-step production deployment guide
+├── Dockerfile                       # Container image definition (python:3.10-slim)
+├── docker-compose.yml               # Multi-service orchestration with healthcheck
+├── Procfile                         # Render / Heroku process definition
+├── gunicorn.conf.py                 # Gunicorn WSGI configuration
+├── start.bat                        # One-command startup script (Windows)
+├── start.sh                         # One-command startup script (macOS / Linux)
+├── test_api.py                      # Quick live-server API smoke test
+├── integrate_training.py            # Auto-integration script for enhanced AI components
 ├── web/                             # Frontend Web Application Suite
 │   ├── index.html                   # Semantic HTML5 Single-Page App
 │   ├── css/
-│   │   └── style.css                # 2026 Obsidian Glass & Spring Motion Design System
+│   │   ├── style.css                # 2026 Obsidian Glass & Spring Motion Design System
+│   │   ├── polish.css               # Typography, pixel alignment & micro-interactions
+│   │   ├── animations-3d.css        # 3D flashcard & spatial animation layer
+│   │   ├── cinema.css               # Cinematic ambient effects
+│   │   ├── ui-fixes.css             # UI alignment corrections
+│   │   └── critical-fixes.css       # Chat, modal, scrollbar & z-index critical fixes
 │   └── js/
-│       └── app.js                   # State management, Audio Synthesizer, Graph Engine, KaTeX
+│       ├── app.js                   # State management, Audio Synthesizer, Graph Engine, KaTeX
+│       ├── motion.js                # Micro-interaction & spring motion helpers
+│       └── three-scene.js           # Three.js ambient background scene
 ├── core/                            # Backend Core Engine & Intelligence Modules
 │   ├── __init__.py
 │   ├── agent_engine.py              # Autonomous multi-persona agent & grounded RAG
+│   ├── agent_engine_enhanced.py     # Enhanced agent engine variant
 │   ├── audio_podcast.py             # 2-host conversational dialogue generator
 │   ├── knowledge_graph.py           # Force-directed concept mind-map generator
 │   ├── analytics.py                 # Exam readiness analytics & weak area diagnostics
@@ -103,11 +121,16 @@ Syllabus-RAG-AI-Agent/
 │   ├── syllabus_analyzer.py         # 3D flashcards & high-yield cheat-sheet compiler
 │   ├── document_loader.py           # Multi-format parser (PDF, PPTX, DOCX, TXT)
 │   ├── text_splitter.py             # Academic recursive text chunking
-│   ├── vector_store.py              # Dense embeddings + cosine similarity search
+│   ├── vector_store.py              # Hybrid dense + BM25 + RRF retrieval engine
+│   ├── vector_store_enhanced.py     # Enhanced retrieval variant with score breakdowns
+│   ├── database.py                  # SQLite persistence layer (syllabus.db)
 │   └── config.py                    # Paths, default models, persona prompts
+├── tests/
+│   └── test_e2e_api.py              # CI-ready end-to-end API test suite
 ├── sample_data/                     # Preloaded academic course materials
-│   └── operating_systems_sample.txt # CS301 Operating Systems (Virtual Memory, Deadlocks)
-└── data/                            # Persistent data storage
+│   ├── operating_systems_sample.txt # CS301 Operating Systems (Virtual Memory, Deadlocks)
+│   └── algorithms_and_data_structures.txt
+└── data/                            # Persistent data storage (git-ignored)
     ├── uploaded_docs/               # Uploaded course materials
     └── vector_db/                   # Persistent vector database index
 ```
@@ -131,6 +154,10 @@ Syllabus-RAG-AI-Agent/
 | `POST` | `/api/flashcards` | Generates active recall flashcards with 3D flip capabilities. |
 | `POST` | `/api/cheatsheet` | Compiles a high-yield summary cheat-sheet for the course. |
 | `POST` | `/api/upload` | Uploads and indexes multi-format course materials (PDF, PPTX, DOCX, TXT). |
+| `GET` | `/api/agent/personas` | Lists the available academic persona prompts. |
+| `POST` | `/api/sample/load` | Loads the bundled sample course material into the index. |
+| `DELETE` | `/api/documents/{doc_name}` | Removes a single document from the vector index. |
+| `POST` | `/api/clear` | Clears all documents and vector indices. |
 | `POST` | `/api/config/key` | Updates Gemini API key and active generative model. |
 
 ---
@@ -174,6 +201,53 @@ python server.py
 Open your browser and navigate to:
 👉 **`http://localhost:8000`**
 
+### ⚡ Alternative: One-Command Startup Scripts
+```bash
+# Windows (checks Python, .env, deps, creates data dirs, starts server)
+start.bat
+
+# macOS / Linux
+bash start.sh
+```
+Set `ENVIRONMENT=production` to launch under Uvicorn with 4 workers instead of development mode.
+
+---
+
+## 🐳 Docker Deployment
+
+```bash
+# Recommended: build and run with docker-compose (includes healthcheck)
+docker-compose up --build
+
+# Or plain Docker
+docker build -t syllabus-rag .
+docker run -p 8000:8000 -e GEMINI_API_KEY=your_gemini_api_key syllabus-rag
+```
+
+The container persists `data/`, `syllabus.db`, and runtime logs via volume mounts and restarts automatically (`restart: unless-stopped`).
+
+---
+
+## 🧪 Testing
+
+```bash
+# End-to-end API test suite — boots the app on an ephemeral port and
+# verifies chat, quiz grading, flashcards, analytics, graph & static serving.
+# Exits non-zero on failure, so it is CI-ready.
+python tests/test_e2e_api.py
+
+# Quick smoke test against an already-running local server
+python test_api.py
+```
+
+---
+
+## ☁️ Production Deployment
+
+- **ASGI entrypoint:** `app.py` — run with `uvicorn app:app --host 0.0.0.0 --port $PORT` or `gunicorn -c gunicorn.conf.py app:app`.
+- **Platform manifests:** `Procfile` (Render / Heroku-style platforms), `Dockerfile` + `docker-compose.yml` (containers).
+- **Full guide:** See [DEPLOYMENT.md](DEPLOYMENT.md) for environment setup, API key configuration, log files, database backup, and a production checklist.
+
 ---
 
 ## 🛠️ Recent Improvements & Fixes
@@ -184,6 +258,9 @@ Open your browser and navigate to:
 - **⚡ Jitter Eliminated** — Streaming chat re-renders are throttled to ~20fps with a final forced render, auto-scroll only engages when already near the bottom (no scroll-fighting), and 3D flip transforms use GPU compositing hints (`will-change`).
 - **🧪 End-to-End Test Suite** — `python tests/test_e2e_api.py` boots the app and verifies status, quiz generation/grading (100% & 0% paths), flashcards, agent chat, analytics, knowledge graph, and static serving — CI-ready with non-zero exit on failure.
 - **🗃️ Clean Runtime State** — `syllabus.db` is no longer tracked (auto-created on first run), keeping the working tree clean across test runs.
+- **🎨 Critical Fixes Stylesheet** — a dedicated `web/css/critical-fixes.css` layer locks in chat functionality, settings modal alignment, scrollbar polish, pointer-events, and z-index stacking corrections.
+- **🧾 Runtime Log Hygiene** — `syllabus_rag.log` and all `*.log` files are now git-ignored, so server runs no longer dirty the working tree.
+- **🐳 Containerized Deployment** — `Dockerfile`, `docker-compose.yml` (with healthcheck + volume persistence), `Procfile`, and `gunicorn.conf.py` enable one-command deploys to any host.
 
 ---
 
