@@ -1,0 +1,575 @@
+/* ==========================================================================
+   CRITICAL FRONTEND FIXES - Chat Functionality & Perfect UI Alignment
+   Fixes all chat errors, settings bar, and box alignment issues
+   ========================================================================== */
+
+/* === CRITICAL FIX 1: Settings Modal Alignment === */
+
+/* Fix Settings Button */
+.settings-btn {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  border-radius: 10px !important;
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.settings-btn:hover {
+  border-color: var(--accent-primary) !important;
+  background: var(--bg-secondary) !important;
+  transform: translateY(-1px) scale(1.05) !important;
+}
+
+/* Fix Settings Modal */
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(12px) !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  animation: modalFadeIn 0.2s ease-out !important;
+}
+
+.modal-overlay.hidden {
+  display: none !important;
+}
+
+.modal-content {
+  background: var(--bg-glass-elevated) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 20px !important;
+  padding: 32px !important;
+  max-width: 500px !important;
+  width: 100% !important;
+  box-shadow: var(--elevated-shadow) !important;
+  animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative !important;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 24px !important;
+}
+
+.modal-header h2 {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  color: var(--text-main) !important;
+}
+
+.modal-close-btn {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+}
+
+.modal-close-btn:hover {
+  background: var(--bg-primary) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--text-main) !important;
+}
+
+.modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+}
+
+.form-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.form-group label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+}
+
+.form-input {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 10px !important;
+  color: var(--text-main) !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+.form-input:focus {
+  outline: none !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+.form-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.save-btn {
+  width: 100% !important;
+  padding: 12px 20px !important;
+  background: var(--gradient-brand) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  margin-top: 8px !important;
+}
+
+.save-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4) !important;
+}
+
+.save-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* === CRITICAL FIX 2: Chat Input Area === */
+
+.chat-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.chat-messages {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  scroll-behavior: smooth !important;
+}
+
+.chat-input-area {
+  padding: 20px !important;
+  background: var(--bg-glass) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  border-top: 1px solid var(--border-subtle) !important;
+  flex-shrink: 0 !important;
+}
+
+.input-wrapper {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 12px !important;
+  background: var(--bg-primary) !important;
+  border: 2px solid var(--border-subtle) !important;
+  border-radius: 16px !important;
+  padding: 12px 16px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+  background: var(--bg-secondary) !important;
+}
+
+.chat-input {
+  flex: 1 !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-main) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  outline: none !important;
+  resize: none !important;
+  min-height: 24px !important;
+  max-height: 120px !important;
+  padding: 0 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+.chat-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.send-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  border-radius: 10px !important;
+  background: var(--gradient-brand) !important;
+  border: none !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  flex-shrink: 0 !important;
+}
+
+.send-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.5) !important;
+}
+
+.send-btn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+.send-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* === CRITICAL FIX 3: Message Bubbles === */
+
+.message-bubble {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  max-width: 85% !important;
+  animation: messagePopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes messagePopIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.message-bubble.user {
+  align-self: flex-end !important;
+  align-items: flex-end !important;
+}
+
+.message-bubble.assistant {
+  align-self: flex-start !important;
+  align-items: flex-start !important;
+}
+
+.bubble-content {
+  padding: 14px 18px !important;
+  border-radius: 16px !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  line-height: 1.6 !important;
+  font-size: 14px !important;
+}
+
+.message-bubble.user .bubble-content {
+  background: var(--gradient-user) !important;
+  color: #ffffff !important;
+  border-bottom-right-radius: 4px !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+}
+
+.message-bubble.assistant .bubble-content {
+  background: var(--bg-glass-card) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-main) !important;
+  border-bottom-left-radius: 4px !important;
+  box-shadow: var(--card-shadow) !important;
+}
+
+/* === CRITICAL FIX 4: Loading State === */
+
+.typing-indicator {
+  display: flex !important;
+  gap: 6px !important;
+  padding: 14px 18px !important;
+  background: var(--bg-glass-card) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 16px !important;
+  border-bottom-left-radius: 4px !important;
+  width: fit-content !important;
+}
+
+.typing-dot {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: var(--accent-primary) !important;
+  animation: typingBounce 1.4s infinite ease-in-out !important;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s !important;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s !important;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s !important;
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+/* === CRITICAL FIX 5: Citation Pills === */
+
+.citation-pills {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin-top: 8px !important;
+}
+
+.citation-pill {
+  padding: 4px 10px !important;
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+}
+
+.citation-pill:hover {
+  border-color: var(--accent-primary) !important;
+  background: var(--bg-secondary) !important;
+  color: var(--accent-primary) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* === CRITICAL FIX 6: Error Messages === */
+
+.error-message {
+  padding: 12px 16px !important;
+  background: rgba(244, 63, 94, 0.15) !important;
+  border: 1px solid rgba(244, 63, 94, 0.3) !important;
+  border-radius: 12px !important;
+  color: #fca5a5 !important;
+  font-size: 13px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.error-message::before {
+  content: "⚠️" !important;
+  font-size: 16px !important;
+}
+
+/* === CRITICAL FIX 7: Perfect Scrollbar === */
+
+.chat-messages::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin: 8px 0 !important;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 999px !important;
+  transition: background 0.2s ease !important;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* === CRITICAL FIX 8: Welcome Card Fix === */
+
+.welcome-hero-card {
+  background: var(--bg-glass-elevated) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 20px !important;
+  padding: 40px !important;
+  margin-bottom: 24px !important;
+  box-shadow: var(--elevated-shadow) !important;
+  text-align: center !important;
+}
+
+/* === CRITICAL FIX 9: Make sure JavaScript works === */
+
+/* Force pointer events on interactive elements */
+button,
+.tab-nav-btn,
+.icon-btn,
+.settings-btn,
+.send-btn,
+.prompt-chip,
+.citation-pill {
+  pointer-events: auto !important;
+}
+
+/* === CRITICAL FIX 10: Z-index fixes === */
+
+.app-header {
+  z-index: 1000 !important;
+}
+
+.chat-sidebar {
+  z-index: 900 !important;
+}
+
+.main-content {
+  z-index: 100 !important;
+}
+
+.modal-overlay {
+  z-index: 9999 !important;
+}
+
+.three-canvas-container {
+  z-index: -1 !important;
+}
+
+.ambient-glow-mesh {
+  z-index: 0 !important;
+}
+
+/* === CRITICAL FIX 11: Ensure proper height === */
+
+html, body {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.app-container {
+  height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.workspace-layout {
+  flex: 1 !important;
+  display: flex !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+}
+
+.main-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+.tab-pane {
+  flex: 1 !important;
+  display: none !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.tab-pane.active {
+  display: flex !important;
+}
+
+/* === CRITICAL FIX 12: Loading spinner for send button === */
+
+.send-btn.loading {
+  pointer-events: none !important;
+}
+
+.send-btn.loading::after {
+  content: "" !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  border-top-color: #ffffff !important;
+  border-radius: 50% !important;
+  animation: spin 0.6s linear infinite !important;
+}
+
+.send-btn.loading svg {
+  display: none !important;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* === FINAL: Ensure everything is visible and clickable === */
+
+* {
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+button {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+input, textarea {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
