@@ -100,6 +100,16 @@ except Exception as e:
 # ---------------------------------------------------------
 # Request Models
 # ---------------------------------------------------------
+def normalize_filter_source(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if cleaned in ["", "All Documents"]:
+            return None
+        return cleaned
+    return None
+
 class ChatRequest(BaseModel):
     query: str
     mode: str = "agent"
@@ -205,41 +215,46 @@ async def upload_documents(files: List[UploadFile] = File(...)):
 
     for file in files:
         try:
+            filename = file.filename or ""
+            if not filename:
+                failed_files.append({"filename": "<unknown>", "reason": "Empty filename received"})
+                continue
+
             # Validate file size (max 50MB)
             file.file.seek(0, 2)  # Seek to end
             file_size = file.file.tell()
             file.file.seek(0)  # Reset to beginning
 
             if file_size > 50 * 1024 * 1024:  # 50MB
-                logger.warning(f"File {file.filename} exceeds 50MB limit")
-                failed_files.append({"filename": file.filename, "reason": "File size exceeds 50MB limit"})
+                logger.warning(f"File {filename} exceeds 50MB limit")
+                failed_files.append({"filename": filename, "reason": "File size exceeds 50MB limit"})
                 continue
 
             # Validate file extension
             allowed_extensions = {'.pdf', '.docx', '.doc', '.pptx', '.ppt', '.txt', '.md', '.markdown'}
-            file_ext = Path(file.filename).suffix.lower()
+            file_ext = Path(filename).suffix.lower()
             if file_ext not in allowed_extensions:
-                logger.warning(f"File {file.filename} has unsupported extension: {file_ext}")
-                failed_files.append({"filename": file.filename, "reason": f"Unsupported file type: {file_ext}"})
+                logger.warning(f"File {filename} has unsupported extension: {file_ext}")
+                failed_files.append({"filename": filename, "reason": f"Unsupported file type: {file_ext}"})
                 continue
 
-            file_path = UPLOAD_DIR / file.filename
+            file_path = UPLOAD_DIR / filename
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
-            logger.info(f"Processing document: {file.filename}")
+            logger.info(f"Processing document: {filename}")
             pages = DocumentLoader.load_document(file_path)
 
             if not pages:
-                logger.warning(f"No content extracted from {file.filename}")
-                failed_files.append({"filename": file.filename, "reason": "No content could be extracted"})
+                logger.warning(f"No content extracted from {filename}")
+                failed_files.append({"filename": filename, "reason": "No content could be extracted"})
                 continue
 
             chunks = splitter.split_documents(pages)
             vector_store.add_chunks(chunks)
             total_added_chunks += len(chunks)
-            saved_files.append(file.filename)
-            logger.info(f"Successfully indexed {file.filename}: {len(chunks)} chunks")
+            saved_files.append(filename)
+            logger.info(f"Successfully indexed {filename}: {len(chunks)} chunks")
 
         except Exception as e:
             logger.error(f"Failed to process file {file.filename}: {e}")
@@ -295,7 +310,10 @@ async def chat_with_agent(req: ChatRequest):
         if not req.query or not req.query.strip():
             raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-        filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+        if req.top_k is not None and req.top_k <= 0:
+            raise HTTPException(status_code=400, detail="top_k must be a positive integer")
+
+        filter_val = normalize_filter_source(req.filter_source)
 
         logger.info(f"Chat query: {req.query[:100]}... | Mode: {req.mode} | Persona: {req.persona}")
 
@@ -316,7 +334,7 @@ async def chat_with_agent(req: ChatRequest):
 
 @app.post("/api/chat/stream")
 async def chat_stream_with_agent(req: ChatRequest):
-    filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+    filter_val = normalize_filter_source(req.filter_source)
     return StreamingResponse(
         agent_engine.query_stream(
             question=req.query,
@@ -332,7 +350,7 @@ async def chat_stream_with_agent(req: ChatRequest):
 @app.post("/api/podcast/generate")
 async def generate_podcast(req: PodcastRequest):
     """Generate 2-host audio podcast dialogue script (NotebookLM style)."""
-    filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+    filter_val = normalize_filter_source(req.filter_source)
     data = podcast_gen.generate_podcast_script(topic=req.topic, filter_source=filter_val)
     return data
 
@@ -343,7 +361,7 @@ async def generate_quiz(req: QuizGenerateRequest):
         if req.num_questions < 1 or req.num_questions > 50:
             raise HTTPException(status_code=400, detail="Number of questions must be between 1 and 50")
 
-        filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+        filter_val = normalize_filter_source(req.filter_source)
 
         logger.info(f"Generating quiz: {req.quiz_type} | Topic: {req.topic} | Questions: {req.num_questions}")
 
@@ -433,7 +451,7 @@ async def export_quiz_worksheet(req: QuizExportRequest):
 
 @app.post("/api/flashcards")
 async def generate_flashcards(req: FlashcardRequest):
-    filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+    filter_val = normalize_filter_source(req.filter_source)
     cards = analyzer.generate_flashcards(
         topic=req.topic,
         num_cards=req.num_cards,
@@ -443,7 +461,7 @@ async def generate_flashcards(req: FlashcardRequest):
 
 @app.post("/api/cheatsheet")
 async def generate_cheatsheet(req: CheatSheetRequest):
-    filter_val = None if req.filter_source in ["All Documents", "", None] else req.filter_source
+    filter_val = normalize_filter_source(req.filter_source)
     content = analyzer.generate_cheat_sheet(filter_source=filter_val)
     return {"cheatsheet": content}
 
@@ -505,7 +523,7 @@ async def execute_code(req: CodeRunRequest):
 
 @app.get("/api/graph/data")
 async def get_concept_graph(filter_source: Optional[str] = None):
-    filter_val = None if filter_source in ["All Documents", "", None] else filter_source
+    filter_val = normalize_filter_source(filter_source)
     return graph_gen.build_graph(filter_source=filter_val)
 
 @app.get("/api/analytics/overview")

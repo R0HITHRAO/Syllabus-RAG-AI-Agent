@@ -80,6 +80,31 @@ class AcademicVectorStore:
         """Tokenize text preserving mathematical symbols and acronyms."""
         return re.findall(r'[A-Za-z0-9_\$\\]+', text.lower())
 
+    def _extract_embedding_vector(self, response: Any) -> Optional[List[float]]:
+        """Normalize Gemini embedding payloads across SDK versions."""
+        if response is None:
+            return None
+        if isinstance(response, dict):
+            if "embedding" in response:
+                embed = response["embedding"]
+                if isinstance(embed, list):
+                    return embed
+            if "values" in response:
+                values = response["values"]
+                if isinstance(values, list):
+                    return values
+        if hasattr(response, "embedding"):
+            embed = response.embedding
+            if isinstance(embed, list):
+                return embed
+        if hasattr(response, "values"):
+            values = response.values
+            if isinstance(values, list):
+                return values
+        if isinstance(response, list):
+            return response
+        return None
+
     def _build_bm25_index(self):
         """Build BM25 lexical index from chunk texts."""
         if not self.chunks:
@@ -94,7 +119,7 @@ class AcademicVectorStore:
         try:
             import google.generativeai as genai
             genai.configure(api_key=self.api_key)
-            
+
             all_vectors = []
             batch_size = 50
             for i in range(0, len(texts), batch_size):
@@ -104,15 +129,32 @@ class AcademicVectorStore:
                     content=batch,
                     task_type="retrieval_document"
                 )
-                if isinstance(response, dict) and "embedding" in response:
-                    all_vectors.extend(response["embedding"])
-                elif hasattr(response, "embeddings"):
-                    all_vectors.extend([e.values for e in response.embeddings])
-                else:
-                    all_vectors.extend(response)
-                    
+
+                if isinstance(response, dict) and "embeddings" in response:
+                    embeddings = response["embeddings"]
+                    if isinstance(embeddings, list):
+                        for item in embeddings:
+                            vector = self._extract_embedding_vector(item)
+                            if vector is not None:
+                                all_vectors.append(vector)
+                        continue
+
+                vector = self._extract_embedding_vector(response)
+                if vector is None and hasattr(response, "embeddings"):
+                    vector_list = response.embeddings
+                    if isinstance(vector_list, list):
+                        for item in vector_list:
+                            parsed = self._extract_embedding_vector(item)
+                            if parsed is not None:
+                                all_vectors.append(parsed)
+                        continue
+                if vector is not None:
+                    all_vectors.append(vector)
+
+            if not all_vectors:
+                return None
             return np.array(all_vectors, dtype=np.float32)
-        except Exception as e:
+        except Exception:
             return None
 
     def _get_gemini_query_embedding(self, query: str) -> Optional[np.ndarray]:
@@ -126,10 +168,16 @@ class AcademicVectorStore:
                 content=query,
                 task_type="retrieval_query"
             )
-            if isinstance(response, dict) and "embedding" in response:
-                return np.array(response["embedding"], dtype=np.float32)
-            elif hasattr(response, "embeddings") and response.embeddings:
-                return np.array(response.embeddings[0].values, dtype=np.float32)
+
+            vector = self._extract_embedding_vector(response)
+            if vector is not None:
+                return np.array(vector, dtype=np.float32)
+
+            if hasattr(response, "embeddings") and response.embeddings:
+                first = response.embeddings[0]
+                vector = self._extract_embedding_vector(first)
+                if vector is not None:
+                    return np.array(vector, dtype=np.float32)
             return None
         except Exception:
             return None

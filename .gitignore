@@ -20,6 +20,7 @@ data/uploaded_docs/
 # IDE / Editor specific
 .vscode/
 .idea/
+.agents/
 # Runtime SQLite state (auto-created on first run)
 syllabus.db
 *.sqlite3
