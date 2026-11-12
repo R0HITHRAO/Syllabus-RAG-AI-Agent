@@ -2,6 +2,7 @@ import re
 import json
 import os
 from typing import Dict, List, Any, Optional
+from core.config import DEFAULT_MODEL
 
 
 class KnowledgeGraphGenerator:
@@ -14,6 +15,7 @@ class KnowledgeGraphGenerator:
 
     def __init__(self, vector_store=None):
         self.vector_store = vector_store
+        self.model_name = DEFAULT_MODEL
 
     def build_graph(self, filter_source: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -119,7 +121,7 @@ class KnowledgeGraphGenerator:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
+                model_name=self.model_name,
                 generation_config={"response_mime_type": "application/json"}
             )
         except Exception as e:

@@ -66,7 +66,7 @@ pip install -r requirements.txt
 2. Edit `.env` and add your Gemini API key:
    ```env
    GEMINI_API_KEY=your_actual_api_key_here
-   GEMINI_MODEL=gemini-1.5-flash
+   GEMINI_MODEL=gemini-3.8-flash
    ENVIRONMENT=production
    ```
 
@@ -167,7 +167,7 @@ heroku create your-app-name
 
 # Set environment variables
 heroku config:set GEMINI_API_KEY=your_key
-heroku config:set GEMINI_MODEL=gemini-1.5-flash
+heroku config:set GEMINI_MODEL=gemini-3.8-flash
 
 # Deploy
 git push heroku main
@@ -295,7 +295,7 @@ rm -rf data/vector_db/*
 1. **Use more workers**: Increase Gunicorn workers to match CPU cores
 2. **Enable caching**: Consider Redis for session/cache management
 3. **Optimize chunks**: Adjust `DEFAULT_CHUNK_SIZE` based on your documents
-4. **Use faster model**: Switch to `gemini-1.5-flash` for speed
+4. **Choose a model**: Set `GEMINI_MODEL` to a Gemini model available to your API key
 5. **Database indexing**: SQLite is fine for < 10K records
 
 ---

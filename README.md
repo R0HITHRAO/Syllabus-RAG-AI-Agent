@@ -59,7 +59,7 @@ flowchart TD
 
     subgraph LLM["2. Agentic Intelligence & Google Gemini API"]
         RRF --> AgentEngine["Autonomous Agent & Multi-Persona Controller"]
-        AgentEngine --> Gemini["Google Gemini 1.5 Flash / Pro"]
+        AgentEngine --> Gemini["Google Gemini API (configurable model)"]
         Gemini --> KaTeX["KaTeX LaTeX Formatter"]
     end
 

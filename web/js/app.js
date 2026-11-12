@@ -1141,16 +1141,18 @@ class SyllabusApp {
   constructor() {
     this.currentMode = 'agent';
     this.currentPersona = 'general';
-    this.currentTheme = localStorage.getItem('syllabus_theme') || 'nebula';
+    this.currentTheme = localStorage.getItem('syllabus_theme') || 'daylight';
     this.sessions = this.loadSessions();
     this.activeSessionId = this.sessions.length > 0 ? this.sessions[0].id : this.createNewSessionId();
     
     this.isStreaming = false;
+    this.isMobileLayout = window.matchMedia('(max-width: 720px)').matches;
     this.speechRecognition = null;
     this.isRecordingVoice = false;
     this.activeQuiz = null;
 
     this.initElements();
+    if (this.isMobileLayout) this.sidebar?.classList.add('collapsed');
     this.canvas = new CanvasStudio(this);
     this.podcast = new AudioPodcastController(this);
     this.graph = new ConceptGraphController(this);
@@ -1324,6 +1326,13 @@ class SyllabusApp {
     this.btnToggleCanvas?.addEventListener('click', () => this.canvas.toggle());
     this.btnToggleSidebar?.addEventListener('click', () => this.sidebar?.classList.toggle('collapsed'));
     this.btnNewChat?.addEventListener('click', () => this.createNewChat());
+    window.addEventListener('resize', () => {
+      const isMobile = window.matchMedia('(max-width: 720px)').matches;
+      if (isMobile !== this.isMobileLayout) {
+        this.isMobileLayout = isMobile;
+        this.sidebar?.classList.toggle('collapsed', isMobile);
+      }
+    });
 
     this.tabButtons.forEach(btn => {
       btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
@@ -1430,8 +1439,14 @@ class SyllabusApp {
   }
 
   switchTab(tabId) {
-    this.tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
-    this.tabPanes.forEach(p => p.classList.toggle('active', p.id === tabId));
+    if (!document.getElementById(tabId)) return;
+    const slideManager = window.__SyllabusAI_3D?.slideManager;
+    if (slideManager) {
+      slideManager.switchTo(tabId);
+    } else {
+      this.tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+      this.tabPanes.forEach(p => p.classList.toggle('active', p.id === tabId));
+    }
     if (tabId === 'tab-graph') {
       this.graph?.resizeCanvas();
       this.graph?.fetchGraphData();
@@ -1439,10 +1454,7 @@ class SyllabusApp {
     if (tabId === 'tab-analytics') {
       this.analytics?.fetchAnalytics();
     }
-    /* Trigger 3D camera glide if scene is loaded */
-    if (window.__SyllabusAI_3D?.scene) {
-      window.__SyllabusAI_3D.scene.goToTab(tabId);
-    }
+    if (window.__SyllabusAI_3D?.scene) window.__SyllabusAI_3D.scene.goToTab(tabId);
   }
 
   launchTopicQuiz(topic) {
@@ -1499,13 +1511,13 @@ class SyllabusApp {
       this.chatMessages.innerHTML = `
         <div class="welcome-hero-card">
           <div class="welcome-badge">
-            <span class="pulse-sparkle">✨</span> 2026 Grounded Intelligence
+            <span class="pulse-sparkle">✨</span> Your personal study workspace
           </div>
           <h1 class="welcome-title">
-            Ask anything about your <span class="gradient-title-text">Course Syllabus</span>
+            Make your next study session <span class="gradient-title-text">count</span>
           </h1>
           <p class="welcome-desc">
-            SyllabusAI blends multi-modal conversational intelligence with lexical BM25 and dense vector ranking over your actual uploaded textbooks, lectures, and exams.
+            Ask a question, explore your course materials, and get clear answers grounded in your uploaded documents.
           </p>
           <div class="prompt-discovery-grid">
             <button class="prompt-chip" data-query="Explain Dijkstra's Banker's Algorithm with safe sequence logic and deadlock prevention.">
@@ -1561,6 +1573,7 @@ class SyllabusApp {
 
     const activeSess = this.getActiveSession();
     if (!activeSess) return;
+    const activeSessionId = activeSess.id;
 
     if (activeSess.messages.length === 0) {
       activeSess.title = text.length > 28 ? text.substring(0, 28) + '...' : text;
@@ -1595,7 +1608,10 @@ class SyllabusApp {
           mode: this.currentMode,
           persona: this.currentPersona,
           filter_source: this.chatDocFilter?.value || 'All Documents',
-          chat_history: activeSess.messages.map(m => ({ role: m.role, content: m.content }))
+          chat_history: activeSess.messages.slice(0, -1).map(m => ({
+            role: m.role === 'agent' ? 'model' : m.role,
+            content: m.content
+          }))
         })
       });
 
@@ -1634,6 +1650,7 @@ class SyllabusApp {
           return;
         }
         lastRenderTime = now;
+        if (!agentMsgEl.isConnected || this.activeSessionId !== activeSessionId) return;
         contentEl.innerHTML = this.renderMarkdown(fullAgentText) + '<span class="typing-cursor"></span>';
         // Only auto-scroll if the user is already near the bottom (prevents scroll-fighting)
         const nearBottom = this.chatMessages.scrollHeight - this.chatMessages.scrollTop - this.chatMessages.clientHeight < 120;
@@ -1642,7 +1659,10 @@ class SyllabusApp {
 
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) {
+          sseBuffer += decoder.decode();
+          break;
+        }
 
         sseBuffer += decoder.decode(value, { stream: true });
 
@@ -1652,9 +1672,9 @@ class SyllabusApp {
         sseBuffer = lines.pop(); // keep the trailing partial line in the buffer
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith('data:')) {
             try {
-              const data = JSON.parse(line.substring(6));
+              const data = JSON.parse(line.slice(5).trimStart());
               if (data.token) {
                 fullAgentText += data.token;
                 renderStreamingContent();
@@ -1662,8 +1682,20 @@ class SyllabusApp {
               if (data.citations && data.citations.length > 0) {
                 collectedCitations = data.citations;
               }
-            } catch {}
+            } catch (parseError) {
+              console.error('Invalid chat stream event:', parseError);
+            }
           }
+        }
+      }
+
+      if (sseBuffer.startsWith('data:')) {
+        try {
+          const data = JSON.parse(sseBuffer.slice(5).trimStart());
+          if (data.token) fullAgentText += data.token;
+          if (data.citations?.length) collectedCitations = data.citations;
+        } catch (parseError) {
+          console.error('Invalid final chat stream event:', parseError);
         }
       }
 
@@ -1711,6 +1743,9 @@ class SyllabusApp {
         citations: collectedCitations
       });
       this.saveSessions();
+      if (this.activeSessionId === activeSessionId && !agentMsgEl.isConnected) {
+        this.renderActiveSessionMessages();
+      }
       this.renderMath();
 
     } catch (err) {
@@ -1724,7 +1759,7 @@ class SyllabusApp {
         </div>`;
     } finally {
       this.isStreaming = false;
-      this.scrollToBottom();
+      if (this.activeSessionId === activeSessionId) this.scrollToBottom();
     }
   }
 
@@ -2228,6 +2263,12 @@ class SyllabusApp {
       if (this.docCountBadge) this.docCountBadge.innerText = data.total_documents;
       if (this.statusDot) this.statusDot.className = 'status-dot online';
       if (this.statusText) this.statusText.innerText = `${data.total_documents} Docs (${data.total_chunks} Chunks)`;
+      const statusSubtitle = document.querySelector('.status-sub');
+      if (statusSubtitle) {
+        statusSubtitle.innerText = data.has_api_key
+          ? `Gemini connected · ${data.active_model}`
+          : 'Local retrieval · Add Gemini key for AI answers';
+      }
 
       if (this.chatDocFilter) {
         this.chatDocFilter.innerHTML = '<option value="All Documents">All Syllabus Documents</option>';
@@ -2304,22 +2345,27 @@ class SyllabusApp {
   async saveSettings() {
     const key = this.geminiKeyInput?.value?.trim();
     const model = this.modelSelect?.value;
-    if (key) {
-      try {
-        await fetch('/api/config/key', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: key, model_name: model })
-        });
-        this._toast('✅ API Key saved! Live AI mode activated.', 'success');
-      } catch {
-        this._toast('⚠️ Failed to save API key. Check connection.', 'error');
-      }
-    } else {
-      this._toast('ℹ️ Settings saved (no API key provided).', 'info');
+    try {
+      const response = await fetch('/api/config/key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: key || null, model_name: model })
+      });
+      if (!response.ok) throw new Error(`Configuration request failed (${response.status})`);
+      const result = await response.json();
+      this._toast(
+        result.has_api_key
+          ? '✅ Configuration saved. Live AI is ready.'
+          : '✅ Model saved. Add a Gemini API key to enable live AI.',
+        result.has_api_key ? 'success' : 'info'
+      );
+      if (this.geminiKeyInput) this.geminiKeyInput.value = '';
+      this.settingsModal.style.display = 'none';
+      this.fetchSystemStatus();
+    } catch (error) {
+      console.error('Failed to save AI configuration:', error);
+      this._toast('⚠️ Failed to save settings. Check the connection and try again.', 'error');
     }
-    this.settingsModal.style.display = 'none';
-    this.fetchSystemStatus();
   }
 
   _toast(message, type = 'info') {

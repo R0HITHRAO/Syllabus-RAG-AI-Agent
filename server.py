@@ -156,7 +156,7 @@ class PodcastRequest(BaseModel):
     filter_source: Optional[str] = None
 
 class ApiKeyRequest(BaseModel):
-    api_key: str
+    api_key: Optional[str] = None
     model_name: Optional[str] = None
 
 # ---------------------------------------------------------
@@ -194,13 +194,19 @@ async def get_personas():
 
 @app.post("/api/config/key")
 async def update_api_key(req: ApiKeyRequest):
-    vector_store.set_api_key(req.api_key)
+    if req.api_key and req.api_key.strip():
+        vector_store.set_api_key(req.api_key.strip())
     if req.model_name:
         agent_engine.model_name = req.model_name
         quiz_gen.model_name = req.model_name
         analyzer.model_name = req.model_name
         podcast_gen.model_name = req.model_name
-    return {"message": "API key and model updated successfully", "model": agent_engine.model_name}
+        graph_gen.model_name = req.model_name
+    return {
+        "message": "Configuration updated successfully",
+        "model": agent_engine.model_name,
+        "has_api_key": bool(vector_store.api_key)
+    }
 
 @app.post("/api/upload")
 async def upload_documents(files: List[UploadFile] = File(...)):

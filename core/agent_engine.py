@@ -24,6 +24,26 @@ class AIAgentEngine:
         self.vector_store = vector_store
         self.model_name = model_name
 
+    @staticmethod
+    def _prepare_chat_history(chat_history: Optional[List[Dict[str, str]]]) -> List[Dict[str, Any]]:
+        """Normalize recent turns for Gemini's alternating user/model history."""
+        normalized: List[Dict[str, Any]] = []
+        for message in (chat_history or [])[-12:]:
+            content = str(message.get("content", "")).strip()
+            if not content:
+                continue
+            role = "user" if message.get("role") == "user" else "model"
+            if role == "model" and not normalized:
+                continue
+            if normalized and normalized[-1]["role"] == role:
+                normalized[-1]["parts"][0] += "\n" + content[-6000:]
+            else:
+                normalized.append({"role": role, "parts": [content[-6000:]]})
+
+        if normalized and normalized[-1]["role"] == "user":
+            normalized.pop()
+        return normalized
+
     def query_stream(
         self,
         question: str,
@@ -118,7 +138,12 @@ class AIAgentEngine:
                     full_prompt += f"Verified Course Material Context:\n\"\"\"\n{context_str}\n\"\"\"\n\n"
                 full_prompt += f"User Question: {question}\n\nPlease provide a natural, comprehensive, well-structured answer with LaTeX ($...$) and code if applicable."
 
-                response_stream = model.generate_content(full_prompt, stream=True)
+                history = self._prepare_chat_history(chat_history)
+                if history:
+                    chat = model.start_chat(history=history)
+                    response_stream = chat.send_message(full_prompt, stream=True)
+                else:
+                    response_stream = model.generate_content(full_prompt, stream=True)
                 for chunk in response_stream:
                     if chunk.text:
                         yield f"data: {json.dumps({'token': chunk.text, 'citations': citations, 'done': False})}\n\n"
@@ -127,14 +152,17 @@ class AIAgentEngine:
                 return
             except Exception as e:
                 print(f"[AgentEngine] Streaming API notice: {e}")
+                yield f"data: {json.dumps({'token': '\n\n> ⚠️ Live Gemini response failed. Check your API key, model availability, and quota.', 'citations': citations, 'done': True, 'error': True})}\n\n"
+                return
 
-        # 6. Built-in Offline Token Streamer
+        # 6. Offline retrieval-only response when no Gemini API key is configured.
         full_text = self._generate_response(
             question=question,
             context_str=context_str,
-            system_prompt="",
-            mode="agent",
-            persona=persona
+            system_prompt=system_prompt,
+            mode=mode,
+            persona=persona,
+            chat_history=chat_history
         )
         tokens = re.split(r'(\s+)', full_text)
         for i, tok in enumerate(tokens):
@@ -313,11 +341,7 @@ class AIAgentEngine:
                     full_prompt += f"Verified Course Material Context:\n\"\"\"\n{context_str}\n\"\"\"\n\n"
                 full_prompt += f"User Question: {question}\n\nPlease provide a natural, comprehensive, well-structured answer with LaTeX ($...$) and code if applicable."
 
-                history_contents = []
-                if chat_history:
-                    for msg in chat_history[-6:]:
-                        role = "user" if msg.get("role") == "user" else "model"
-                        history_contents.append({"role": role, "parts": [msg.get("content", "")]})
+                history_contents = self._prepare_chat_history(chat_history)
 
                 if history_contents:
                     chat = model.start_chat(history=history_contents)
@@ -329,12 +353,21 @@ class AIAgentEngine:
                     return response.text.strip()
             except Exception as e:
                 print(f"[AIAgentEngine] LLM API Call: {e}")
+                if context_str:
+                    return (
+                        "### Live AI response unavailable\n\n"
+                        "Gemini did not complete this request. Check the API key, selected model, and quota. "
+                        "The retrieved course excerpts are shown below as a fallback; they have not been rewritten by the model.\n\n"
+                        + self._builtin_generative_reasoner(context_str)
+                    )
+                return (
+                    "### Live AI response unavailable\n\n"
+                    "Gemini did not complete this request. Check the API key, selected model, and quota, then try again."
+                )
 
-        return self._builtin_generative_reasoner(question, context_str, persona)
+        return self._builtin_generative_reasoner(context_str)
 
-    def _builtin_generative_reasoner(self, question: str, context_str: str, persona: str) -> str:
-        q_lower = question.lower()
-
+    def _builtin_generative_reasoner(self, context_str: str) -> str:
         # 1. Course Context Question
         if context_str:
             lines = [line.strip() for line in context_str.split("\n") if line.strip()]
@@ -345,64 +378,13 @@ class AIAgentEngine:
             content_summary = "\n\n".join(extracted[:6])
 
             return (
-                f"### Grounded Response ({persona.replace('_', ' ').title()})\n\n"
+                "### Retrieved Course Excerpts (Offline)\n\n"
                 f"{content_summary}\n\n"
-                f"> *Tip: Add your Gemini API key in ⚙️ Settings for live generative reasoning & explanations.*"
+                "> These excerpts are shown as-is, not synthesized by an AI model. Check the Gemini key, selected model, and quota in Settings for AI-generated explanations."
             )
 
-        # 2. Explicit Coding Requests
-        is_code_request = any(p in q_lower for p in ["write code", "write a python", "write javascript", "implement", "code for", "write script", "function to", "reverse linked list"])
-        if is_code_request:
-            if "reverse" in q_lower and "linked list" in q_lower:
-                return (
-                    "### Reverse a Singly Linked List in Python\n\n"
-                    "Here is the standard, efficient three-pointer iterative solution:\n\n"
-                    "```python\n"
-                    "class ListNode:\n"
-                    "    def __init__(self, val=0, next=None):\n"
-                    "        self.val = val\n"
-                    "        self.next = next\n\n"
-                    "def reverse_linked_list(head: ListNode) -> ListNode:\n"
-                    "    prev = None\n"
-                    "    curr = head\n"
-                    "    \n"
-                    "    while curr is not None:\n"
-                    "        next_node = curr.next  # 1. Save reference to next node\n"
-                    "        curr.next = prev       # 2. Reverse current node's pointer\n"
-                    "        prev = curr            # 3. Step prev forward\n"
-                    "        curr = next_node       # 4. Step curr forward\n"
-                    "        \n"
-                    "    return prev  # New head of reversed list\n"
-                    "```\n\n"
-                    "#### Complexity Analysis:\n"
-                    "- **Time Complexity**: $\\mathcal{O}(n)$ — Single pass over $n$ elements.\n"
-                    "- **Space Complexity**: $\\mathcal{O}(1)$ — In-place pointer modifications.\n\n"
-                    "> *Tip: Add your Gemini API Key in Settings for dynamic live code generation across any problem!*"
-                )
-            else:
-                return (
-                    f"### Code Implementation for: *{question}*\n\n"
-                    f"Here is a clean implementation in Python:\n\n"
-                    f"```python\n"
-                    f"def solve(data):\n"
-                    f"    \"\"\"\n"
-                    f"    Processes input data with optimal runtime complexity.\n"
-                    f"    \"\"\"\n"
-                    f"    if not data:\n"
-                    f"        return []\n"
-                    f"    \n"
-                    f"    return [x for x in data]\n"
-                    f"```\n\n"
-                    f"#### Complexity:\n"
-                    f"- **Time**: $\\mathcal{{O}}(n)$ | **Space**: $\\mathcal{{O}}(1)$\n\n"
-                    f"> *Tip: Add your Gemini API Key in Settings for dynamic code generation across all languages.*"
-                )
-
-        # 3. Natural Direct Conversational Response
         return (
-            f"Here is a helpful explanation regarding **{question}**:\n\n"
-            f"- **Overview**: This is a key concept that focuses on understanding the underlying structure, rules, and optimal methods.\n"
-            f"- **Key Considerations**: In practice, always analyze the input constraints, edge cases, and expected output behavior.\n"
-            f"- **Next Steps**: Let me know if you would like me to write a full code implementation, derive mathematical formulas, or relate this to your uploaded course syllabus!\n\n"
-            f"> *Note: Connect your free Gemini API Key in ⚙️ Settings for full real-time open-ended generative chat across every topic.*"
+            "### Connect Gemini to chat\n\n"
+            "Live AI responses are not configured. Add a Gemini API key in **Settings** to enable tutoring, coding help, and multi-turn conversations. "
+            "Document search, quizzes, flashcards, and the other local study tools remain available."
         )

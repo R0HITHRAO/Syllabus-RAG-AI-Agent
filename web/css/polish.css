@@ -551,4 +551,100 @@ html, body {
 
 /* ============ END OF POLISH LAYER v1.0 ============ */
 
+/* Layout stability fixes for the actual responsive app shell and chat markup. */
+.app-container {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+}
+
+.workspace-layout,
+.main-content,
+.tab-pane.active,
+.chat-wrapper,
+.chat-messages {
+  min-width: 0;
+  min-height: 0;
+}
+
+.chat-wrapper {
+  flex: 1 1 0;
+  width: 100%;
+}
+
+.chat-messages {
+  flex: 1 1 0;
+}
+
+@media (max-width: 900px) {
+  .app-header {
+    height: auto;
+    min-height: 64px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 12px;
+  }
+
+  .header-left {
+    width: 100%;
+    min-height: 36px;
+    justify-content: flex-start;
+  }
+
+  .header-controls {
+    order: 2;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 4px;
+    scrollbar-width: none;
+  }
+
+  .header-controls::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .chat-sidebar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    height: 100%;
+    z-index: 40;
+  }
+
+  .chat-messages {
+    padding: 16px 12px;
+    gap: 14px;
+  }
+
+  .welcome-hero-card {
+    padding: 24px 16px;
+    margin: 4px auto 12px;
+  }
+
+  .hero-title,
+  .welcome-title {
+    font-size: clamp(24px, 7vw, 32px);
+  }
+
+  .message-bubble {
+    max-width: 100% !important;
+    gap: 8px;
+  }
+
+  .message-bubble .message-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .chat-command-wrapper {
+    max-width: none;
+    padding: 8px 12px 12px;
+  }
+}
 

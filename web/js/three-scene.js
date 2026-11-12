@@ -363,7 +363,7 @@ class DirectionalTabSlideManager {
 
     this.tabOrder = ['tab-chat','tab-podcast','tab-exam','tab-docs','tab-flashcards','tab-graph','tab-analytics'];
     this.currentTabId = 'tab-chat';
-    this.isAnimating = false;
+    this.transitionId = 0;
 
     /* Sliding pill indicator */
     this.pill = document.querySelector('.tab-slider-pill');
@@ -371,31 +371,29 @@ class DirectionalTabSlideManager {
   }
 
   switchTo(tabId) {
-    if (tabId === this.currentTabId || this.isAnimating) return;
-    this.isAnimating = true;
+    if (!this.tabOrder.includes(tabId)) return;
+    if (tabId === this.currentTabId) return;
 
     const prevIdx = this.tabOrder.indexOf(this.currentTabId);
     const nextIdx = this.tabOrder.indexOf(tabId);
     const direction = nextIdx > prevIdx ? 'right' : 'left';
+    const transitionId = ++this.transitionId;
 
     const allPanes = document.querySelectorAll('.tab-pane');
     const prevPane = document.getElementById(this.currentTabId);
     const nextPane = document.getElementById(tabId);
 
-    /* Exit previous */
-    if (prevPane) {
-      prevPane.classList.add(direction === 'right' ? 'slide-exit-left' : 'slide-exit-right');
-      prevPane.addEventListener('animationend', () => {
-        prevPane.classList.remove('active', 'slide-exit-left', 'slide-exit-right');
-      }, { once: true });
-    }
+    allPanes.forEach(pane => {
+      pane.classList.remove('slide-enter-right', 'slide-enter-left', 'slide-exit-left', 'slide-exit-right');
+      pane.classList.toggle('active', pane.id === tabId);
+    });
 
-    /* Enter next */
-    if (nextPane) {
-      nextPane.classList.add('active', direction === 'right' ? 'slide-enter-right' : 'slide-enter-left');
+    if (nextPane && prevPane) {
+      nextPane.classList.add(direction === 'right' ? 'slide-enter-right' : 'slide-enter-left');
       nextPane.addEventListener('animationend', () => {
-        nextPane.classList.remove('slide-enter-right', 'slide-enter-left');
-        this.isAnimating = false;
+        if (this.transitionId === transitionId) {
+          nextPane.classList.remove('slide-enter-right', 'slide-enter-left');
+        }
       }, { once: true });
     }
 
@@ -450,22 +448,6 @@ window.init3DScene = function(syllabusAppInstance) {
 
   const slideManager = new DirectionalTabSlideManager(syllabusAppInstance, scene);
   window.__SyllabusAI_3D.slideManager = slideManager;
-
-  /* Patch SyllabusApp.switchTab to route through slide manager */
-  if (syllabusAppInstance) {
-    const originalSwitchTab = syllabusAppInstance.switchTab.bind(syllabusAppInstance);
-    syllabusAppInstance.switchTab = function(tabId) {
-      /* Use slide manager for animated switch */
-      slideManager.switchTo(tabId);
-    };
-
-    /* Re-bind tab nav buttons to use new switchTab */
-    document.querySelectorAll('.tab-nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        syllabusAppInstance.switchTab(btn.dataset.tab);
-      });
-    });
-  }
 
   /* Re-position pill on window resize */
   window.addEventListener('resize', () => slideManager._movePillToActive());
